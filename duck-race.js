@@ -189,6 +189,9 @@ class DuckRaceGame {
     }
 
     this.updateLeaderboard();
+    // Always show a preview of racers on the track
+    this.initializeDucks();
+    this.draw();
   }
 
   generateRandomColor() {
@@ -307,6 +310,10 @@ class DuckRaceGame {
       if (this.raceActive && document.hidden) {
         // When tab becomes hidden, ensure game continues with setTimeout
         this.ensureGameContinues();
+      } else if (!document.hidden) {
+        // When tab becomes visible, stop backup loop and reset timing
+        this.backupLoopRunning = false;
+        this.lastFrameTime = performance.now();
       }
     });
 
@@ -319,20 +326,43 @@ class DuckRaceGame {
   }
 
   ensureGameContinues() {
-    // Backup game loop using setTimeout when tab is hidden
-    const hiddenGameLoop = () => {
-      if (this.raceActive && document.hidden) {
+    // Reset the frame timing to prevent jumps when tab becomes visible again
+    this.lastFrameTime = performance.now();
+    
+    // Start backup loop if not already running
+    if (!this.backupLoopRunning) {
+      this.startBackupLoop();
+    }
+  }
+
+  startBackupLoop() {
+    this.backupLoopRunning = true;
+    const backupGameLoop = () => {
+      if (this.raceActive && document.hidden && this.backupLoopRunning) {
         if (!this.gameLoopRunning) {
           this.gameLoopRunning = true;
-          this.update();
-          this.draw();
-          this.updateLeaderboard();
+          
+          const currentTime = performance.now();
+          const deltaTime = currentTime - this.lastFrameTime;
+          
+          // Cap deltaTime to prevent timing issues
+          const cappedDeltaTime = Math.min(deltaTime, 33.33);
+          
+          if (cappedDeltaTime >= 16.67) {
+            this.update();
+            this.draw();
+            this.updateLeaderboard();
+            this.lastFrameTime = currentTime;
+          }
+          
           this.gameLoopRunning = false;
         }
-        setTimeout(hiddenGameLoop, 16.67); // Continue at 60 FPS
+        setTimeout(backupGameLoop, 16.67);
+      } else {
+        this.backupLoopRunning = false;
       }
     };
-    setTimeout(hiddenGameLoop, 16.67);
+    setTimeout(backupGameLoop, 16.67);
   }
 
   openAddRacerDialog() {
@@ -736,6 +766,7 @@ class DuckRaceGame {
     // Start game loop with requestAnimationFrame and setTimeout fallback
     this.lastFrameTime = performance.now();
     this.gameLoopRunning = false;
+    this.backupLoopRunning = false;
     this.gameLoop = () => {
       if (this.gameLoopRunning) return; // Prevent double execution
       this.gameLoopRunning = true;
@@ -743,8 +774,11 @@ class DuckRaceGame {
       const currentTime = performance.now();
       const deltaTime = currentTime - this.lastFrameTime;
 
+      // Cap deltaTime to prevent large jumps when tab becomes visible again
+      const cappedDeltaTime = Math.min(deltaTime, 33.33); // Cap at 2 frames (33.33ms)
+
       // Target 60 FPS (16.67ms per frame)
-      if (deltaTime >= 16.67) {
+      if (cappedDeltaTime >= 16.67) {
         this.update();
         this.draw();
         this.updateLeaderboard();
@@ -754,14 +788,13 @@ class DuckRaceGame {
       this.gameLoopRunning = false;
 
       if (this.raceActive) {
-        // Use both requestAnimationFrame and setTimeout to ensure continuity
+        // Use requestAnimationFrame as primary timing mechanism
         requestAnimationFrame(this.gameLoop);
-        // Fallback setTimeout in case requestAnimationFrame is throttled when tab is hidden
-        setTimeout(() => {
-          if (this.raceActive && document.hidden) {
-            this.gameLoop();
-          }
-        }, 16.67);
+        
+        // Backup setTimeout for when tab is hidden (but prevent double execution)
+        if (document.hidden && !this.backupLoopRunning) {
+          this.startBackupLoop();
+        }
       }
     };
 
@@ -1051,6 +1084,91 @@ class DuckRaceGame {
 
     // Draw UI
     this.drawUI();
+
+    // Draw winner overlay if any duck has finished (show immediately when leader crosses finish line)
+    if (
+      this.ducks &&
+      this.ducks.length > 0 &&
+      this.ducks.some((d) => d.finished)
+    ) {
+      this.drawWinnerOverlay();
+    }
+  }
+
+  /**
+   * Draws a dark transparent overlay with the winner's profile/circle, name, and trophy.
+   */
+  drawWinnerOverlay() {
+    // Find winner (lowest finishTime)
+    const winner = this.ducks.reduce((prev, curr) =>
+      curr.finished && (!prev.finished || curr.finishTime < prev.finishTime)
+        ? curr
+        : prev
+    );
+    if (!winner.finished) return;
+
+    const ctx = this.ctx;
+    const { width, height } = this.canvas;
+
+    // Draw dark transparent overlay
+    ctx.save();
+    ctx.fillStyle = "rgba(20, 20, 30, 0.82)";
+    ctx.fillRect(0, 0, width, height);
+
+    // Center coordinates
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    // Draw trophy emoji
+    ctx.font = "64px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.shadowColor = "#000";
+    ctx.shadowBlur = 8;
+    ctx.fillText("🏆", centerX, centerY - 80);
+    ctx.shadowBlur = 0;
+
+    // Draw profile picture or colored circle
+    const avatarY = centerY - 10;
+    const avatarRadius = 48;
+    if (winner.profilePicture && winner.profilePicture.trim() !== "") {
+      this.drawProfilePicture(winner, centerX, avatarY, avatarRadius);
+    } else {
+      // Draw colored circle with initial
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, avatarY, avatarRadius, 0, 2 * Math.PI);
+      ctx.fillStyle = winner.color || "#888";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "#fff";
+      ctx.stroke();
+      ctx.font = "bold 40px Arial";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(winner.name[0], centerX, avatarY);
+      ctx.restore();
+    }
+
+    // Draw winner name
+    ctx.font = "bold 36px Arial";
+    ctx.fillStyle = winner.color || "#FFD700";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.shadowColor = "#000";
+    ctx.shadowBlur = 6;
+    ctx.fillText(winner.name, centerX, centerY + 50);
+    ctx.shadowBlur = 0;
+
+    // Draw subtext
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Winner!", centerX, centerY + 95);
+
+    ctx.restore();
   }
 
   drawWater() {
@@ -1220,51 +1338,56 @@ class DuckRaceGame {
       this.ctx.textAlign = "left"; // Reset alignment
     }
 
-    // Progress indicator (full width at bottom)
-    this.ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-    this.ctx.fillRect(0, this.canvas.height - 25, this.canvas.width, 25);
+    // Progress indicator (full width at bottom) - only show during race or after race completion
+    const hasFinishedDucks =
+      this.ducks && this.ducks.some((duck) => duck.finished);
+    if (this.raceActive || hasFinishedDucks) {
+      this.ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      this.ctx.fillRect(0, this.canvas.height - 25, this.canvas.width, 25);
 
-    // Show progress of leading duck based on actual race distance
-    let progress = 0;
-    let progressColor = "#333"; // Default color
-    if (this.ducks && this.ducks.length > 0) {
-      if (this.raceActive) {
-        // During race: show current leader
-        const leader = this.ducks.reduce((prev, curr) =>
-          curr.x > prev.x ? curr : prev
+      // Show progress of leading duck based on actual race distance
+      let progress = 0;
+      let progressColor = "#333"; // Default color
+      if (this.ducks && this.ducks.length > 0) {
+        if (this.raceActive) {
+          // During race: show current leader
+          const leader = this.ducks.reduce((prev, curr) =>
+            curr.x > prev.x ? curr : prev
+          );
+          progress = Math.min(leader.x / this.raceDistance, 1);
+          progressColor = leader.color;
+        } else {
+          // After race: show winner (first place finisher)
+          const winner = this.ducks.reduce((prev, curr) =>
+            curr.finished &&
+            (!prev.finished || curr.finishTime < prev.finishTime)
+              ? curr
+              : prev
+          );
+          progress = 1; // Show full progress
+          progressColor = winner.color;
+        }
+
+        this.ctx.fillStyle = progressColor;
+        this.ctx.fillRect(
+          0,
+          this.canvas.height - 25,
+          this.canvas.width * progress,
+          25
         );
-        progress = Math.min(leader.x / this.raceDistance, 1);
-        progressColor = leader.color;
-      } else {
-        // After race: show winner (first place finisher)
-        const winner = this.ducks.reduce((prev, curr) =>
-          curr.finished && (!prev.finished || curr.finishTime < prev.finishTime)
-            ? curr
-            : prev
-        );
-        progress = 1; // Show full progress
-        progressColor = winner.color;
       }
 
-      this.ctx.fillStyle = progressColor;
-      this.ctx.fillRect(
-        0,
-        this.canvas.height - 25,
-        this.canvas.width * progress,
-        25
+      // Progress text (centered)
+      this.ctx.fillStyle = "#fff";
+      this.ctx.font = "bold 16px Arial";
+      this.ctx.textAlign = "center";
+      this.ctx.fillText(
+        `Race Progress: ${(progress * 100).toFixed(1)}%`,
+        this.canvas.width / 2,
+        this.canvas.height - 6
       );
+      this.ctx.textAlign = "left"; // Reset text alignment
     }
-
-    // Progress text (centered)
-    this.ctx.fillStyle = "#fff";
-    this.ctx.font = "bold 16px Arial";
-    this.ctx.textAlign = "center";
-    this.ctx.fillText(
-      `Race Progress: ${(progress * 100).toFixed(1)}%`,
-      this.canvas.width / 2,
-      this.canvas.height - 6
-    );
-    this.ctx.textAlign = "left"; // Reset text alignment
   }
 
   drawDucks() {
@@ -1528,8 +1651,8 @@ class DuckRaceGame {
       window.stopBackgroundMusic();
     }
 
-    // Reset all ducks and clear progress
-    this.ducks = [];
+    // Reset race state but keep racers visible
+    this.initializeDucks(); // Reinitialize ducks at starting positions
     this.cameraX = 0;
 
     // Update button text back to "Start Race"
@@ -1849,6 +1972,8 @@ class DuckRaceGame {
         const img = new Image();
         img.onload = () => {
           this.loadedImages[imageKey] = img;
+          // Trigger a redraw when image loads to display it immediately
+          this.draw();
         };
         img.onerror = () => {
           // Mark as failed so we don't keep trying
