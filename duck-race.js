@@ -328,7 +328,7 @@ class DuckRaceGame {
   ensureGameContinues() {
     // Reset the frame timing to prevent jumps when tab becomes visible again
     this.lastFrameTime = performance.now();
-    
+
     // Start backup loop if not already running
     if (!this.backupLoopRunning) {
       this.startBackupLoop();
@@ -341,20 +341,20 @@ class DuckRaceGame {
       if (this.raceActive && document.hidden && this.backupLoopRunning) {
         if (!this.gameLoopRunning) {
           this.gameLoopRunning = true;
-          
+
           const currentTime = performance.now();
           const deltaTime = currentTime - this.lastFrameTime;
-          
+
           // Cap deltaTime to prevent timing issues
           const cappedDeltaTime = Math.min(deltaTime, 33.33);
-          
+
           if (cappedDeltaTime >= 16.67) {
             this.update();
             this.draw();
             this.updateLeaderboard();
             this.lastFrameTime = currentTime;
           }
-          
+
           this.gameLoopRunning = false;
         }
         setTimeout(backupGameLoop, 16.67);
@@ -790,7 +790,7 @@ class DuckRaceGame {
       if (this.raceActive) {
         // Use requestAnimationFrame as primary timing mechanism
         requestAnimationFrame(this.gameLoop);
-        
+
         // Backup setTimeout for when tab is hidden (but prevent double execution)
         if (document.hidden && !this.backupLoopRunning) {
           this.startBackupLoop();
