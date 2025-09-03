@@ -1,0 +1,732 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Arial", sans-serif;
+  background: linear-gradient(135deg, #87ceeb 0%, #4682b4 100%);
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  min-width: 350px;
+  max-width: 350px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  transition: margin-left 0.3s ease;
+  position: relative;
+}
+
+.sidebar.collapsed {
+  margin-left: 0px;
+  min-width: 40px;
+  padding: 20px 10px;
+  min-width: unset;
+}
+
+.collapse-btn {
+  position: fixed;
+  top: 0px;
+  left: 390px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  padding: 8px 10px;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  z-index: 1000;
+}
+
+.collapse-btn.collapsed {
+  left: 60px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.header-btn {
+  min-width: 60px;
+  height: 30px;
+  border: 2px solid;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.header-btn:hover {
+  transform: scale(1.1);
+}
+
+.add-btn {
+  background: white;
+  color: #27ae60;
+  border-color: #27ae60;
+}
+
+.start-btn {
+  background: red;
+  color: #fff;
+  border-color: #000;
+}
+
+.header-btn.hidden {
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-header {
+  padding: 0;
+  border: none;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar.collapsed .sidebar-header h2 {
+  display: none;
+}
+
+.sidebar.collapsed .header-buttons {
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  width: 100%;
+  display: flex;
+}
+
+.sidebar.collapsed .header-btn {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  min-width: 35px;
+}
+
+.sidebar.collapsed .add-btn {
+  display: none;
+}
+
+.sidebar.collapsed .skill-list {
+  display: none;
+}
+
+.sidebar.collapsed .log {
+  display: none;
+}
+
+.sidebar.collapsed .leaderboard {
+  display: flex !important;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 5px 0;
+  height: auto;
+  margin-bottom: 10px;
+}
+
+.sidebar.collapsed .racer-config {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  background: none !important;
+  margin: 2px 0;
+  border: none !important;
+}
+
+.sidebar.collapsed .racer-config .duck-info {
+  margin: 0;
+  width: 100%;
+  justify-content: center;
+}
+
+.sidebar.collapsed .racer-config .duck-name {
+  display: none;
+}
+
+.sidebar.collapsed .racer-config .racer-buttons {
+  display: none;
+}
+
+.sidebar.collapsed .racer-circle {
+  width: 35px !important;
+  height: 35px !important;
+  margin: 0 !important;
+}
+
+.sidebar.collapsed .profile-picture-circle {
+  width: 35px !important;
+  height: 35px !important;
+  margin: 0 !important;
+}
+
+.sidebar.collapsed .startBtn-text {
+  display: none;
+}
+
+.sidebar.collapsed .race-log-header {
+  display: none;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  position: relative;
+}
+
+.title-container {
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+}
+
+.edit-icon {
+  position: absolute;
+  right: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.title-container:hover .edit-icon {
+  opacity: 1;
+}
+
+.race-title-input {
+  font-size: 32px;
+  font-weight: bold;
+  color: #2c3e50;
+  text-align: center;
+  border: 2px dashed transparent;
+  background: transparent;
+  padding: 10px 20px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  min-width: 300px;
+}
+
+.race-title-input:hover {
+  border-color: rgba(44, 62, 80, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.race-title-input:focus {
+  outline: none;
+  border-color: #3498db;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2c3e50;
+  text-shadow: none;
+}
+
+.race-title-input:disabled {
+  cursor: not-allowed;
+  border-color: transparent;
+  background: transparent;
+}
+
+.race-title-input:disabled:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+h1 {
+  color: #2c3e50;
+  text-align: center;
+  margin: 0 0 20px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.game-container {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+canvas {
+  border: 3px solid #2c3e50;
+  border-radius: 10px;
+  background: linear-gradient(to bottom, #87ceeb 0%, #20b2aa 100%);
+}
+
+.controls {
+  margin-bottom: 20px;
+}
+
+.racer-config {
+  background: rgba(240, 248, 255, 0.8);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 3px 0;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.duck-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.racer-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  flex-shrink: 0;
+}
+
+.duck-name {
+  font-weight: bold;
+  color: #2c3e50;
+  font-size: 13px;
+}
+
+.racer-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.skill-info {
+  font-size: 10px;
+  color: #666;
+  background: white;
+  padding: 3px;
+  border-radius: 3px;
+  margin-top: 3px;
+}
+
+.remove-btn {
+  background: linear-gradient(45deg, #ff4757, #c44569);
+  border: none;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 5px;
+  align-self: flex-start;
+  transition: transform 0.2s;
+}
+
+.remove-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.remove-btn-small {
+  background: linear-gradient(45deg, #ff4757, #c44569);
+  border: none;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 10px;
+  margin-left: 5px;
+  transition: transform 0.2s;
+}
+
+.remove-btn-small:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.edit-btn-small {
+  background: linear-gradient(45deg, #3498db, #2980b9);
+  border: none;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.edit-btn-small:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.add-racer-btn {
+  background: linear-gradient(45deg, #4ecdc4, #44a08d);
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  margin: 10px 0;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.2s;
+  width: 100%;
+  font-size: 14px;
+}
+
+.add-racer-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.racer-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.settings-dialog {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.dialog-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  min-width: 300px;
+}
+
+.dialog-content h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.dialog-content input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dialog-buttons button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.dialog-buttons button:first-child {
+  background: #95a5a6;
+  color: white;
+}
+
+.dialog-buttons button:last-child {
+  background: #4ecdc4;
+  color: white;
+}
+
+.skill-list summary {
+  cursor: pointer;
+  padding: 10px 0;
+  user-select: none;
+}
+
+.skill-list summary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+}
+
+.skill-list[open] summary {
+  margin-bottom: 10px;
+}
+
+.leaderboard {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  height: 200px;
+  overflow-y: auto;
+  font-size: 12px;
+  border: 2px solid #e9ecef;
+  margin-bottom: 20px;
+}
+
+.leaderboard-entry {
+  padding: 3px 8px;
+  margin: 2px 0;
+  border-radius: 3px;
+  background: white;
+  border-left: 3px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.leaderboard-entry.first {
+  border-left-color: #ffd700;
+  background: #fffbf0;
+}
+
+.leaderboard-entry.second {
+  border-left-color: #c0c0c0;
+  background: #f8f8f8;
+}
+
+.leaderboard-entry.third {
+  border-left-color: #cd7f32;
+  background: #fdf7f0;
+}
+
+.log {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 12px;
+  border: 2px solid #e9ecef;
+}
+
+.log-entry {
+  margin: 5px 0;
+  padding: 3px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.log-skill {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.log-winner {
+  color: #27ae60;
+  font-weight: bold;
+  font-size: 16px;
+  text-align: center;
+  background: #d4edda;
+  border-radius: 5px;
+  padding: 8px;
+}
+
+.skill-list {
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 15px;
+  border: 1px solid #ddd;
+}
+
+.skill-item {
+  margin: 5px 0;
+  font-size: 12px;
+  color: #555;
+}
+
+.settings-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: #6c5ce7;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.settings-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar.collapsed .settings-btn {
+  bottom: 0;
+  right: auto;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  padding: 8px;
+  margin: 10px auto;
+  display: block;
+  font-size: 16px;
+  background: unset;
+  margin-top: auto;
+}
+
+.sidebar.collapsed .settings-btn-text {
+  display: none;
+}
+
+.file-upload-area {
+  border: 2px dashed #ddd;
+  border-radius: 5px;
+  padding: 20px;
+  text-align: center;
+  margin: 10px 0;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.file-upload-area:hover {
+  border-color: #4caf50;
+}
+
+.file-upload-area.dragover {
+  border-color: #2196f3;
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.preview-image {
+  max-width: 32px;
+  max-height: 32px;
+  border-radius: 50%;
+  margin: 5px;
+}
+
+/* Volume Control Button */
+.volume-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  z-index: 1001;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.volume-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+.volume-btn.muted {
+  background: rgba(255, 100, 100, 0.9);
+  color: white;
+}
+
+/* Reset Data Button */
+.reset-data-btn {
+  position: relative;
+  width: 100%;
+  padding: 12px 20px;
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+  overflow: hidden;
+}
+
+.reset-data-btn:hover {
+  background: #c0392b;
+}
+
+.reset-data-btn:active {
+  background: #a93226;
+}
+
+.reset-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  width: 0%;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
+
+/* Dialog Close Button */
+.dialog-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  color: #666;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.dialog-close-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  color: #e74c3c;
+  transform: scale(1.1);
+}
