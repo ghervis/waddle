@@ -553,6 +553,14 @@ canvas {
   font-weight: bold;
 }
 
+.log-leader {
+  color: #f39c12;
+  font-weight: bold;
+  background: #fef9e7;
+  border-radius: 3px;
+  padding: 2px 5px;
+}
+
 .log-winner {
   color: #27ae60;
   font-weight: bold;

@@ -31,7 +31,6 @@ class DuckRaceGame {
     this.gameLoop = null;
     this.animationId = null;
     this.lastFrameTime = 0;
-    this.skillTimer = null;
     this.gameLoopRunning = false; // Prevent double execution
 
     // Load custom racers from localStorage
@@ -67,6 +66,615 @@ class DuckRaceGame {
     this.draw();
     this.generateBackgroundElements();
     this.setupEventListeners();
+  }
+
+  // Use race simulator for more accurate race simulation - MANDATORY
+  useRaceSimulator() {
+    if (!window.simulateRace) {
+      console.error(
+        "❌ Race simulator not loaded! Cannot start race without simulator."
+      );
+      alert(
+        "Race simulator is required but not loaded. Please refresh the page."
+      );
+      return false;
+    }
+
+    console.log("🦆 Race simulator loaded successfully!", window.simulateRace);
+
+    // Convert current ducks to participants format for race simulator
+    const participants = this.ducks.map((duck) => ({
+      id: duck.id,
+      name: duck.name,
+      profile: duck.profilePicture,
+      color: duck.color,
+    }));
+
+    // Get race title
+    const title = this.raceTitleInput.value.trim() || "Duck Race";
+
+    console.log("🏁 Starting simulation with participants:", participants);
+
+    // Run the simulation
+    try {
+      const simulationResult = window.simulateRace(participants);
+
+      if (simulationResult) {
+        console.log("✅ Simulation completed successfully:", simulationResult);
+        // Apply simulation results to visual ducks
+        this.applySimulationResults(simulationResult);
+        return true;
+      } else {
+        console.error("❌ Simulation failed:", simulationResult.error);
+        alert("Race simulation failed: " + simulationResult.error);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Race simulation error:", error);
+      alert("Race simulation error: " + error.message);
+      return false;
+    }
+
+    return false;
+  }
+
+  // Apply simulation results to the visual race
+  applySimulationResults(raceData) {
+    // Store the PRE-CALCULATED simulation data from race-simulator.js
+    this.simulationDuration = raceData.duration;
+    this.simulationStandings = raceData.standings;
+    this.simulationEvents = raceData.events; // Skill events and race events
+    this.simulationProgress = raceData.secondlyProgress; // Position data every 500ms
+    this.simulationConfig = raceData.config;
+
+    // Initialize smooth movement tracking
+    this.lastSimulationTimeStep = -1; // Track when simulation data changes
+
+    console.log("🔍 Using simulation results:", {
+      duration: this.simulationDuration,
+      events: this.simulationEvents.length,
+      progressPoints: this.simulationProgress.length,
+      standings: this.simulationStandings.map((s) => ({
+        name: s.name,
+        finishTime: s.finishTime,
+        finished: s.finished,
+      })),
+    });
+
+    // Reset visual ducks to starting positions
+    this.ducks.forEach((duck, index) => {
+      duck.x = 50;
+      duck.finished = false;
+      duck.finishTime = 0;
+      duck.position = index + 1;
+
+      // Reset status effects
+      duck.stunned = 0;
+      duck.boosted = 0;
+      duck.immune = 0;
+      duck.leechAffected = 0;
+      duck.magnetBoost = 0;
+      duck.splashBoost = 0;
+      duck.speedMultiplier = 1.0;
+      duck.effects = [];
+    });
+
+    // Mark that we're using simulation mode
+    this.usingSimulation = true;
+    this.simulationStartTime = Date.now();
+    this.currentEventIndex = 0; // Track which events we've processed
+    this.currentProgressIndex = 0; // Track progress data
+
+    console.log(
+      `🏁 Simulation ready: ${this.simulationEvents.length} events, ${this.simulationProgress.length} progress points`
+    );
+  }
+
+  // Update duck positions based on PRE-CALCULATED simulation data
+  updateFromSimulation() {
+    if (!this.usingSimulation || !this.simulationProgress) return;
+
+    const now = Date.now();
+    const raceTimeMs = now - this.simulationStartTime; // Time in milliseconds
+
+    // Process skill events that should have occurred by now
+    while (
+      this.currentEventIndex < this.simulationEvents.length &&
+      this.simulationEvents[this.currentEventIndex].t <= raceTimeMs // Compressed: event.time -> event.t
+    ) {
+      const event = this.simulationEvents[this.currentEventIndex];
+      this.replaySimulationEvent(event);
+      this.currentEventIndex++;
+    }
+
+    // Get current positions from progress data (500ms intervals)
+    const currentTimeStep = Math.floor(raceTimeMs / 500) * 500; // Round to nearest 500ms
+    const nextTimeStep = currentTimeStep + 500;
+    const progress = (raceTimeMs - currentTimeStep) / 500; // Fraction between time steps (0-1)
+
+    // Check if we have new simulation data (only update targets when data changes)
+    const hasNewData = this.lastSimulationTimeStep !== currentTimeStep;
+    if (hasNewData) {
+      this.lastSimulationTimeStep = currentTimeStep;
+    }
+
+    // Find the progress data for current and next time step
+    const currentData = this.simulationProgress.find(
+      (p) => p.t === currentTimeStep
+    );
+    const nextData = this.simulationProgress.find((p) => p.t === nextTimeStep);
+
+    if (currentData) {
+      // Update duck positions with smooth interpolation and auto-correction
+      this.ducks.forEach((duck) => {
+        // Handle ongoing smooth animations (like finishing) even if duck is marked as finished
+        if (duck.smoothTarget) {
+          this.smoothMoveToPosition(duck, duck.smoothTarget.x);
+          return; // Continue animation, don't override with simulation data
+        }
+
+        if (duck.finished) return;
+
+        // Find this duck's data in current time step using ID
+        const currentDuckData = currentData.p.find((p) => p.i === duck.id);
+        if (!currentDuckData) return;
+
+        // Check if duck finished this time step (metersTraveled >= 4000)
+        if (currentDuckData.mt >= 4000) {
+          duck.finished = true;
+          duck.finishTime = raceTimeMs; // Keep finishTime in milliseconds
+          // Smooth animation to finish line instead of immediate warp
+          this.smoothMoveToPosition(duck, this.convertMetersToPixels(4000));
+          this.log(`🏁 ${duck.name} finished!`);
+          return;
+        }
+
+        let targetMeters = currentDuckData.mt;
+
+        // Simple linear interpolation between current and next data point
+        if (nextData && progress > 0) {
+          const nextDuckData = nextData.p.find((p) => p.i === duck.id);
+          if (nextDuckData && nextDuckData.mt < 4000) {
+            targetMeters =
+              currentDuckData.mt +
+              (nextDuckData.mt - currentDuckData.mt) * progress;
+          }
+        }
+
+        // Convert to pixels and apply directly
+        duck.x = this.convertMetersToPixels(targetMeters);
+
+        // Calculate current effects from events for this duck at current time
+        const currentEffects = this.calculateEffectsFromEvents(
+          duck,
+          raceTimeMs
+        );
+
+        // Update status effects for visual display with duration information
+        duck.statusEffects = [];
+        duck.effectDurations = {}; // Store remaining durations for visual effects
+
+        if (currentEffects.stunned) {
+          duck.statusEffects.push("stunned");
+          duck.effectDurations.stunned = currentEffects.stunnedRemaining;
+        }
+        if (currentEffects.boosted) {
+          duck.statusEffects.push("boosted");
+          duck.effectDurations.boosted = currentEffects.boostedRemaining;
+        }
+        if (currentEffects.immune) {
+          duck.statusEffects.push("immune");
+          duck.effectDurations.immune = currentEffects.immuneRemaining;
+        }
+        if (currentEffects.splashAffected) {
+          duck.statusEffects.push("splash");
+          duck.effectDurations.splash = currentEffects.splashRemaining;
+        }
+        if (currentEffects.magnetBoosted) {
+          duck.statusEffects.push("magnet");
+          duck.effectDurations.magnet = currentEffects.magnetRemaining;
+        }
+      });
+    }
+
+    // Update camera to follow the leader and check for lead changes
+    if (
+      this.ducks &&
+      this.ducks.length > 0 &&
+      this.raceActive &&
+      this.usingSimulation
+    ) {
+      // Get current race time for simulation data lookup
+      const now = Date.now();
+      const raceTimeMs = now - this.simulationStartTime;
+      const currentTimeStep = Math.floor(raceTimeMs / 500) * 500;
+
+      // Find simulation data for current time
+      const currentData = this.simulationProgress.find(
+        (p) => p.t === currentTimeStep
+      );
+
+      if (currentData && currentData.p && currentData.p.length > 0) {
+        // Sort by actual meters traveled (mt) from simulation
+        const sortedByProgress = [...currentData.p].sort((a, b) => b.mt - a.mt);
+        const currentLeaderData = sortedByProgress[0];
+        const currentLeader = this.getDuckById(currentLeaderData.i);
+
+        // Check for lead changes based on actual progress
+        if (
+          this.previousLeaderId !== currentLeaderData.i &&
+          currentLeader &&
+          currentLeaderData.mt > 50 &&
+          !this.ducks.some((d) => d.finished)
+        ) {
+          console.log(
+            `REAL LEAD CHANGE: ${currentLeader.name} takes the lead! (progress: ${currentLeaderData.mt}m)`
+          );
+          this.log(`🏆 ${currentLeader.name} takes the lead!`, "leader");
+          this.previousLeaderId = currentLeaderData.i;
+        }
+
+        // Use visual leader for camera
+        const visualLeader = this.ducks.reduce((prev, curr) =>
+          curr.x > prev.x ? curr : prev
+        );
+        this.cameraX = Math.max(0, visualLeader.x - this.viewportWidth / 3);
+      } else {
+        // Fallback to visual leader for camera only
+        const leader = this.ducks.reduce((prev, curr) =>
+          curr.x > prev.x ? curr : prev
+        );
+        this.cameraX = Math.max(0, leader.x - this.viewportWidth / 3);
+      }
+    } else if (this.ducks && this.ducks.length > 0) {
+      // Fallback when not using simulation
+      const leader = this.ducks.reduce((prev, curr) =>
+        curr.x > prev.x ? curr : prev
+      );
+      this.cameraX = Math.max(0, leader.x - this.viewportWidth / 3);
+    }
+
+    // Update positions based on current x values
+    const sortedDucks = [...this.ducks].sort((a, b) => b.x - a.x);
+    sortedDucks.forEach((duck, index) => {
+      duck.position = index + 1;
+    });
+
+    // Check if race is complete (both times now in milliseconds)
+    if (raceTimeMs >= this.simulationDuration) {
+      console.log("🏁 Simulation completed - ending race");
+      this.endRace();
+    }
+  }
+
+  // Helper function to get duck by ID
+  getDuckById(duckId) {
+    return this.ducks.find((duck) => duck.id === duckId);
+  }
+
+  // Calculate current effects for a duck based on events
+  calculateEffectsFromEvents(duck, currentTime) {
+    const effects = {
+      stunned: false,
+      boosted: false,
+      immune: false,
+      splashAffected: false,
+      magnetBoosted: false,
+      // Add duration information for smoother animations
+      stunnedRemaining: 0,
+      boostedRemaining: 0,
+      immuneRemaining: 0,
+      splashRemaining: 0,
+      magnetRemaining: 0,
+    };
+
+    if (!this.simulationEvents) return effects;
+
+    // Check all events that could affect this duck
+    this.simulationEvents.forEach((event) => {
+      if (event.s && event.t <= currentTime) {
+        // Check for skill events (compressed: event.skill -> event.s, event.time -> event.t)
+        const timeElapsed = currentTime - event.t;
+        const remainingTime = Math.max(
+          0,
+          (event.d || event.sd || 0) - timeElapsed
+        );
+
+        switch (
+          event.s // Compressed: event.skill -> event.s
+        ) {
+          case "boost":
+            if (event.id === duck.id && timeElapsed < event.d) {
+              // Compressed: event.duck -> event.id, event.duration -> event.d
+              effects.boosted = true;
+              effects.boostedRemaining = Math.max(
+                effects.boostedRemaining,
+                remainingTime
+              );
+            }
+            break;
+
+          case "immune":
+            if (event.id === duck.id && timeElapsed < event.d) {
+              // Compressed field names
+              effects.immune = true;
+              effects.immuneRemaining = Math.max(
+                effects.immuneRemaining,
+                remainingTime
+              );
+            }
+            break;
+
+          case "bomb":
+            if (event.ta === duck.name && timeElapsed < event.sd) {
+              // Compressed: event.target -> event.ta, event.stunDuration -> event.sd
+              effects.stunned = true;
+              const stunRemaining = Math.max(0, event.sd - timeElapsed);
+              effects.stunnedRemaining = Math.max(
+                effects.stunnedRemaining,
+                stunRemaining
+              );
+            }
+            break;
+
+          case "splash":
+            // Check if this duck was in range during splash - affects ducks other than the caster
+            const splashCaster = this.getDuckById(event.id);
+            if (
+              splashCaster &&
+              splashCaster.name !== duck.name &&
+              timeElapsed < event.d
+            ) {
+              effects.splashAffected = true;
+              effects.splashRemaining = Math.max(
+                effects.splashRemaining,
+                remainingTime
+              );
+            }
+            break;
+
+          case "lightning":
+            // Lightning affects all ducks except the caster
+            const lightningCaster = this.getDuckById(event.id);
+            if (
+              lightningCaster &&
+              lightningCaster.name !== duck.name &&
+              timeElapsed < event.sd
+            ) {
+              effects.stunned = true;
+              const lightningStunRemaining = Math.max(
+                0,
+                event.sd - timeElapsed
+              );
+              effects.stunnedRemaining = Math.max(
+                effects.stunnedRemaining,
+                lightningStunRemaining
+              );
+            }
+            break;
+
+          case "magnet":
+            if (event.targetDuck === duck.name && timeElapsed < event.d) {
+              // Compressed field names
+              effects.magnetBoosted = true;
+              effects.magnetRemaining = Math.max(
+                effects.magnetRemaining,
+                remainingTime
+              );
+            }
+            break;
+        }
+      }
+    });
+
+    return effects;
+  }
+
+  // Calculate average speed during a time interval, considering effect start/end times
+  calculateAverageSpeedDuringInterval(duck, startTime, endTime, baseSpeed) {
+    const intervalDuration = endTime - startTime;
+    if (intervalDuration <= 0) return baseSpeed;
+
+    // Find all events that affect this duck during the interval
+    const relevantEvents = this.simulationEvents.filter((event) => {
+      if (event.type !== "skill") return false;
+
+      // Check if event affects this duck
+      let affectsThisDuck = false;
+      switch (
+        event.s // Compressed: event.skill -> event.s
+      ) {
+        case "boost":
+        case "immune":
+          affectsThisDuck = event.id === duck.id; // Compressed: event.duck -> event.id, compare by ID
+          break;
+        case "bomb":
+          affectsThisDuck = event.ta === duck.name; // Compressed: event.target -> event.ta
+          break;
+        case "splash":
+        case "lightning":
+          affectsThisDuck = event.id !== duck.id; // Compressed: event.duck -> event.id, compare by ID
+          break;
+        case "magnet":
+          affectsThisDuck = event.targetDuck === duck.name;
+          break;
+      }
+
+      if (!affectsThisDuck) return false;
+
+      // Check if event's duration overlaps with our interval
+      const eventStartTime = event.t; // Compressed: event.time -> event.t
+      const eventEndTime = event.t + (event.d || event.sd || 0); // Compressed: event.duration -> event.d, event.stunDuration -> event.sd
+
+      return eventStartTime < endTime && eventEndTime > startTime;
+    });
+
+    // If no events affect this interval, return base speed
+    if (relevantEvents.length === 0) return baseSpeed;
+
+    // Sample speed at multiple points during the interval
+    const sampleCount = Math.max(5, Math.ceil(intervalDuration / 100)); // Sample every 100ms or 5 samples minimum
+    let totalSpeed = 0;
+
+    for (let i = 0; i < sampleCount; i++) {
+      const sampleTime = startTime + (intervalDuration * i) / (sampleCount - 1);
+      const effectsAtTime = this.calculateEffectsFromEvents(duck, sampleTime);
+
+      let speedAtTime = baseSpeed;
+      if (effectsAtTime.stunned) {
+        speedAtTime = 0;
+      } else {
+        if (effectsAtTime.boosted) speedAtTime *= 1.5;
+        if (effectsAtTime.magnetBoosted) speedAtTime *= 1.3;
+        if (effectsAtTime.splashAffected) speedAtTime *= 1.2;
+      }
+
+      totalSpeed += speedAtTime;
+    }
+
+    return totalSpeed / sampleCount;
+  }
+
+  // Convert meters from simulation to pixel positions on canvas
+  convertMetersToPixels(meters) {
+    const startX = 50; // Starting position in pixels
+    const progress = Math.min(meters / 4000, 1); // Progress from 0 to 1 (4000m = finish line)
+    return startX + (this.raceDistance - startX) * progress;
+  }
+
+  // Convert pixel positions back to meters
+  convertPixelsToMeters(pixels) {
+    const startX = 50; // Starting position in pixels
+    const progress = Math.max(
+      0,
+      (pixels - startX) / (this.raceDistance - startX)
+    );
+    return progress * 4000; // Convert back to meters
+  }
+
+  // Smooth movement to a specific position (for finish line)
+  smoothMoveToPosition(duck, targetX) {
+    if (!duck.smoothTarget) {
+      duck.smoothTarget = {
+        x: targetX,
+        startX: duck.x,
+        startTime: Date.now(),
+        duration: 500, // 500ms animation to finish
+      };
+    }
+
+    const elapsed = Date.now() - duck.smoothTarget.startTime;
+    const progress = Math.min(elapsed / duck.smoothTarget.duration, 1);
+
+    // Easing function for smooth finish (ease-out)
+    const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+    duck.x =
+      duck.smoothTarget.startX +
+      (duck.smoothTarget.x - duck.smoothTarget.startX) * easedProgress;
+
+    // Clean up when animation is complete
+    if (progress >= 1) {
+      duck.x = targetX;
+      delete duck.smoothTarget;
+    }
+  }
+
+  // Replay a single event from the pre-calculated simulation
+  replaySimulationEvent(event) {
+    // Determine event type based on compressed fields
+    if (event.ft !== undefined) {
+      // Finish event (has finish time)
+      const finisher = this.getDuckById(event.id); // Get duck by ID
+      if (finisher && !finisher.finished) {
+        finisher.finished = true;
+        finisher.finishTime = event.ft; // Compressed: event.finishTime -> event.ft
+        // Use smooth animation to finish line instead of immediate positioning
+        this.smoothMoveToPosition(finisher, this.convertMetersToPixels(4000));
+        this.log(`🏁 ${finisher.name} finished the race!`);
+      }
+    } else if (event.s) {
+      // Skill event (has skill field)
+      const duck = this.getDuckById(event.id); // Get duck by ID instead of name
+      if (duck) {
+        this.log(`⚡ ${duck.name} used ${event.s}!`); // Compressed: event.skill -> event.s
+
+        // Add visual floating effect for skill use (display for 1 second)
+        switch (
+          event.s // Compressed: event.skill -> event.s
+        ) {
+          case "boost":
+            this.addEffect(duck, "🚀 BOOST!", "#FFD700", 1000);
+            break;
+          case "immune":
+            this.addEffect(duck, "🛡️ IMMUNE!", "#00FFFF", 1000);
+            break;
+          case "bomb":
+            this.addEffect(duck, "💣 BOMB!", "#FF4444", 1000);
+            if (event.ta) {
+              // Compressed: event.target -> event.ta
+              this.log(
+                `💥 ${event.ta} was stunned by ${duck.name}'s bomb!` // Use duck.name instead of event.duck
+              );
+              const target = this.ducks.find((d) => d.name === event.ta); // Compressed: event.target -> event.ta
+              if (target) {
+                this.addEffect(target, "💥 STUNNED!", "#FF0000", 1000);
+              }
+            }
+            break;
+          case "splash":
+            this.addEffect(duck, "🌊 SPLASH!", "#0066FF", 1000);
+            this.log(
+              `🌊 ${duck.name} splashed ${event.ac || 0} ducks!` // Use duck.name instead of event.duck
+            );
+            break;
+          case "lightning":
+            this.addEffect(duck, "⚡ LIGHTNING!", "#FFFF00", 1000);
+            this.log(
+              `⚡ ${duck.name} stunned ${
+                event.sc || 0 // Compressed: event.stunnedCount -> event.sc
+              } ducks with lightning!`
+            );
+            // Add stunned effects to other ducks
+            this.ducks.forEach((otherDuck) => {
+              if (otherDuck !== duck && !otherDuck.finished) {
+                this.addEffect(otherDuck, "⚡ ZAP!", "#FFFF00", 1000);
+              }
+            });
+            break;
+          case "magnet":
+            this.addEffect(
+              duck,
+              `🧲 MAGNET ${Math.round((event.bp || 0) * 100)}%!`, // Compressed: event.boostPercent -> event.bp
+              "#FF00FF",
+              1000
+            );
+
+            // If magnet attached to a different duck, show effect on target too
+            if (event.targetDuck && event.targetDuck !== duck.name) {
+              const targetDuck = this.ducks.find(
+                (d) => d.name === event.targetDuck
+              );
+              if (targetDuck) {
+                this.addEffect(
+                  targetDuck,
+                  `🧲 BOOSTED ${Math.round(
+                    (event.bp || 0) * 100 // Compressed: event.boostPercent -> event.bp
+                  )}%!`,
+                  "#FF00FF",
+                  1000
+                );
+              }
+              this.log(
+                `🧲 ${duck.name} attached magnet to ${event.targetDuck}!` // Use duck.name instead of event.duck
+              );
+            } else {
+              this.log(`🧲 ${duck.name} activated magnet boost!`); // Use duck.name instead of event.duck
+              break;
+            }
+        }
+      }
+    }
   }
 
   loadCustomRacers() {
@@ -260,6 +868,17 @@ class DuckRaceGame {
         finished: false,
         finishTime: 0,
         position: 1,
+
+        // Smooth movement tracking
+        velocity: 0, // Current velocity for smooth acceleration/deceleration
+        lastX: 50, // Previous position for velocity calculation
+        lastUpdateTime: Date.now(), // Last update timestamp
+
+        // Enhanced smooth speed tracking
+        currentVisualSpeed: 100, // Current visual speed for smooth transitions
+        lastSimulationPosition: 0, // Last known simulation position
+        lastSimulationTime: 0, // When we last got simulation data
+        smoothVelocity: 0, // Smoothed velocity for natural movement
 
         // Status effects
         stunned: 0,
@@ -736,8 +1355,24 @@ class DuckRaceGame {
       return;
     }
 
+    // Ensure we have the latest racer data before initializing ducks
+    this.updateRacersList();
+    this.initializeDucks();
+    this.clearLog();
+
+    // MANDATORY: Use race simulator - race cannot start without it
+    const usingSimulator = this.useRaceSimulator();
+
+    if (!usingSimulator) {
+      console.error("❌ Race failed to start: Simulator is required");
+      this.log("❌ Race failed to start: Simulator is required");
+      return; // Exit early if simulator fails
+    }
+
+    // Only proceed if simulator was successful
     this.raceActive = true;
     this.raceStartTime = Date.now();
+    this.previousLeaderId = null; // Initialize for lead change detection
     const startBtn = document.getElementById("startBtn");
     startBtn.innerHTML = "🛑 <span class='startBtn-text'>Stop</span>";
     startBtn.disabled = false;
@@ -749,11 +1384,9 @@ class DuckRaceGame {
     // Disable race title editing during race
     this.raceTitleInput.disabled = true;
 
-    // Ensure we have the latest racer data before initializing ducks
-    this.updateRacersList();
-    this.initializeDucks();
-    this.clearLog();
-    this.log("🏁 Race Started! Ducks are off!");
+    this.log(
+      "🏁 Race Started! Using advanced simulation engine with position auto-correction!"
+    );
 
     // Play start sound
     this.playSound("start");
@@ -799,274 +1432,42 @@ class DuckRaceGame {
     };
 
     requestAnimationFrame(this.gameLoop);
-
-    // No longer need global skill timer - each duck has individual timing
   }
 
   update() {
     if (!this.raceActive) return;
 
-    const now = Date.now();
-    let allFinished = true;
-
-    // Update camera to follow the leader
-    if (this.ducks && this.ducks.length > 0) {
-      const leader = this.ducks.reduce((prev, curr) =>
-        curr.x > prev.x ? curr : prev
-      );
-      this.cameraX = Math.max(0, leader.x - this.viewportWidth / 3);
+    // MANDATORY: Only simulation mode is allowed
+    if (this.usingSimulation) {
+      this.updateFromSimulation();
+      return;
     }
 
-    this.ducks.forEach((duck) => {
-      if (duck.finished) return;
-      allFinished = false;
-
-      // Update status effects
-      this.updateStatusEffects(duck, now);
-
-      // Move duck if not stunned
-      if (duck.stunned < now) {
-        duck.x += duck.speed * duck.speedMultiplier;
-
-        // Check if finished
-        if (duck.x >= this.raceDistance) {
-          duck.x = this.raceDistance;
-          duck.finished = true;
-          duck.finishTime = now - this.raceStartTime;
-          this.addEffect(duck, "🏆 FINISHED!", "#FFD700", 3000);
-          this.log(
-            `🏆 ${duck.name} finished in ${(duck.finishTime / 1000).toFixed(
-              2
-            )}s!`
-          );
-          // Play finish sound
-          this.playSound("finish");
-        }
-      }
-
-      // Check for skill usage with individual timers
-      if (now >= duck.nextSkillTime && !duck.finished) {
-        this.tryUseSkill(duck, now);
-        // Set next skill time (5-10 seconds from now)
-        duck.nextSkillTime = now + Math.random() * 5000 + 5000;
-      }
-    });
-
-    // Update positions
-    this.updatePositions();
-
-    // Check if race is over
-    if (allFinished) {
-      this.endRace();
-    }
-  }
-
-  updateStatusEffects(duck, now) {
-    duck.speedMultiplier = 1.0;
-
-    // Apply boost
-    if (duck.boosted > now) {
-      duck.speedMultiplier *= 1.1;
-    }
-
-    // Apply magnet boost
-    if (duck.magnetBoost > now) {
-      duck.speedMultiplier *= duck.magnetMultiplier;
-    }
-
-    // Apply splash boost
-    if (duck.splashBoost > now) {
-      duck.speedMultiplier *= duck.splashMultiplier;
-    }
-
-    // Apply leech effect
-    if (duck.leechAffected > now) {
-      duck.speedMultiplier *= 0.95;
-    }
-
-    // Update effects
-    duck.effects = duck.effects.filter((effect) => effect.endTime > now);
+    // Traditional mode should NEVER run - this is a safety fallback that logs an error
+    console.error(
+      "❌ CRITICAL ERROR: Traditional race mode attempted to run! This should never happen."
+    );
+    console.error("❌ Race will be stopped to prevent inconsistent results.");
+    this.log("❌ ERROR: Race stopped due to simulation failure");
+    this.stopRace();
+    return;
   }
 
   addEffect(duck, text, color, duration) {
     const now = Date.now();
+
+    // Ensure effects array exists
+    if (!duck.effects) {
+      duck.effects = [];
+    }
+
     duck.effects.push({
       text: text,
       color: color,
       startTime: now,
       endTime: now + duration,
-      y: Math.random() * 30 - 15, // Random vertical offset
+      // Remove random Y offset for consistent positioning
     });
-  }
-
-  updatePositions() {
-    // Sort ducks by distance traveled
-    const sortedDucks = [...this.ducks].sort((a, b) => b.x - a.x);
-    sortedDucks.forEach((duck, index) => {
-      duck.position = index + 1;
-    });
-  }
-
-  useRandomSkills() {
-    // This method is no longer used - skills are handled individually in update()
-  }
-
-  tryUseSkill(duck, now) {
-    if (duck.finished || duck.stunned > now) return;
-
-    // 70% chance to actually use a skill when the timer is up
-    if (Math.random() > 0.7) return;
-
-    const availableSkills = this.getAvailableSkills(duck);
-    if (availableSkills.length === 0) return;
-
-    // Check race progress for lightning boost
-    const raceProgress = duck.x / this.raceDistance;
-    let skill;
-
-    if (availableSkills.includes("lightning") && raceProgress > 0.8) {
-      // 60% chance to use lightning when race progress > 80%
-      skill =
-        Math.random() < 0.6
-          ? "lightning"
-          : availableSkills[Math.floor(Math.random() * availableSkills.length)];
-    } else {
-      skill =
-        availableSkills[Math.floor(Math.random() * availableSkills.length)];
-    }
-
-    this.useSkill(duck, skill, now);
-  }
-
-  getAvailableSkills(duck) {
-    const skills = ["boost", "bomb", "leech", "immune"];
-
-    // Lightning and Magnet can only be used by last place
-    if (
-      duck.position === this.ducks.filter((d) => !d.finished).length &&
-      duck.position === this.ducks.length
-    ) {
-      skills.push("lightning", "magnet");
-    }
-
-    return skills;
-  }
-
-  useSkill(duck, skillName, now) {
-    if (duck.immune > now) return; // Duck is immune
-
-    // Set skill text display
-    duck.skillText = this.skills[skillName].name;
-    duck.skillTextTimer = now + 2000;
-
-    // Play skill sound effect
-    this.playSound("skill");
-
-    switch (skillName) {
-      case "boost":
-        const boostDuration = 1000 + Math.random() * 3000; // 1-4 seconds
-        duck.boosted = now + boostDuration;
-        this.addEffect(duck, "⏩ BOOST!", "#FFD700", 2000);
-        this.log(`⏩ ${duck.name} #${duck.position} used Boost!`, "skill");
-        break;
-
-      case "bomb":
-        if (this.ducks && this.ducks.length > 0) {
-          const leader = this.ducks.reduce((prev, curr) =>
-            curr.x > prev.x && !curr.finished ? curr : prev
-          );
-          if (leader && leader !== duck && leader.immune <= now) {
-            const bombStunDuration = 1000 + Math.random() * 1000; // 1-2 seconds
-            leader.stunned = now + bombStunDuration;
-            this.addEffect(duck, "💣 BOMB!", "#FF4444", 1500);
-            this.addEffect(leader, "💥 STUNNED!", "#FF0000", 2000);
-            this.log(
-              `💣 ${duck.name} #${duck.position} bombed ${leader.name} #${leader.position}!`,
-              "skill"
-            );
-          }
-        }
-        break;
-
-      case "leech":
-        let affectedCount = 0;
-        const splashDuration = 1000 + Math.random() * 1000; // 1-2 seconds
-        this.ducks.forEach((target) => {
-          if (target.immune <= now) {
-            target.leechAffected = now + splashDuration;
-            if (target !== duck) {
-              affectedCount++;
-              this.addEffect(target, "🌊 SPLASH", "#0088FF", splashDuration);
-            }
-          }
-        });
-
-        // Give caster bonus based on affected ducks (5% per affected duck)
-        const splashBoostMultiplier = 1 + affectedCount * 0.05;
-        duck.splashBoost = now + splashDuration;
-        duck.splashMultiplier = splashBoostMultiplier;
-
-        this.addEffect(duck, "🌊 WADDLE WADDLE!", "#0066CC", splashDuration);
-        this.log(
-          `🌊 ${duck.name} #${duck.position} used Splash! Affected ${
-            affectedCount + 1
-          } ducks, +${Math.round((splashBoostMultiplier - 1) * 100)}% speed`,
-          "skill"
-        );
-        break;
-
-      case "immune":
-        const immuneDuration = 1000 + Math.random() * 2000; // 1-3 seconds
-        duck.immune = now + immuneDuration;
-        this.addEffect(duck, "🛡️ IMMUNE!", "#00FFFF", immuneDuration);
-        this.log(`🛡️ ${duck.name} #${duck.position} used Immune!`, "skill");
-        break;
-
-      case "lightning":
-        this.ducks.forEach((target) => {
-          if (target !== duck && target.immune <= now && !target.finished) {
-            target.stunned = now + 1000;
-            this.addEffect(target, "⚡ ZAP!", "#FFFF00", 1000);
-          }
-        });
-        this.addEffect(duck, "⚡ LIGHTNING!", "#FFD700", 1500);
-        this.log(
-          `⚡ ${duck.name} #${duck.position} used Lightning! All others stunned!`,
-          "skill"
-        );
-        break;
-
-      case "magnet":
-        // Find the leader (duck with highest x position)
-        const leader = this.ducks.reduce((prev, curr) =>
-          curr.x > prev.x ? curr : prev
-        );
-
-        // Calculate distance difference between caster and leader
-        const distanceDiff = leader.x - duck.x;
-
-        // Calculate boost: 5% per 100 distance units, capped at 50%
-        const boostPercent = Math.min(0.5, (distanceDiff / 100) * 0.05);
-        const magnetDuration = 1000 + Math.random() * 2000; // 1-3 seconds
-
-        // Apply magnet boost
-        duck.magnetBoost = now + magnetDuration;
-        duck.magnetMultiplier = 1 + boostPercent;
-
-        this.addEffect(
-          duck,
-          `🧲 MAGNET ${Math.round(boostPercent * 100)}%!`,
-          "#FF6B6B",
-          magnetDuration
-        );
-        this.log(
-          `🧲 ${duck.name} #${duck.position} used Magnet! ${Math.round(
-            boostPercent * 100
-          )}% speed boost!`,
-          "skill"
-        );
-        break;
-    }
   }
 
   draw() {
@@ -1099,13 +1500,23 @@ class DuckRaceGame {
    * Draws a dark transparent overlay with the winner's profile/circle, name, and trophy.
    */
   drawWinnerOverlay() {
-    // Find winner (lowest finishTime)
-    const winner = this.ducks.reduce((prev, curr) =>
-      curr.finished && (!prev.finished || curr.finishTime < prev.finishTime)
-        ? curr
-        : prev
-    );
-    if (!winner.finished) return;
+    // Find winner using the same logic as endRace
+    let winner;
+
+    if (this.usingSimulation && this.simulationStandings) {
+      // Use simulation results for winner (same as in endRace)
+      const winnerData = this.simulationStandings[0];
+      winner = this.ducks.find((d) => d.id === winnerData.id) || this.ducks[0];
+    } else {
+      // Use traditional logic for winner
+      winner = this.ducks.reduce((prev, curr) =>
+        curr.finished && (!prev.finished || curr.finishTime < prev.finishTime)
+          ? curr
+          : prev
+      );
+    }
+
+    if (!winner || !winner.finished) return;
 
     const ctx = this.ctx;
     const { width, height } = this.canvas;
@@ -1414,31 +1825,51 @@ class DuckRaceGame {
     const duckHeight = Math.round(20 * 1.7); // 34 (70% bigger)
     const headSize = Math.round(16 * 1.4 * 1.4); // 22 * 1.4 = 30.8 -> 31 (40% bigger again)
 
-    // Draw status effects background
-    if (duck.stunned > now) {
-      this.ctx.fillStyle = "rgba(255, 0, 0, 0.3)";
-      this.ctx.fillRect(
-        screenX - 20,
-        screenY - 20,
-        duckWidth * 1.8,
-        duckHeight * 1.8
-      );
-    } else if (duck.boosted > now) {
-      this.ctx.fillStyle = "rgba(255, 255, 0, 0.3)";
-      this.ctx.fillRect(
-        screenX - 20,
-        screenY - 20,
-        duckWidth * 1.8,
-        duckHeight * 1.8
-      );
-    } else if (duck.immune > now) {
-      this.ctx.fillStyle = "rgba(0, 255, 255, 0.3)";
-      this.ctx.fillRect(
-        screenX - 20,
-        screenY - 20,
-        duckWidth * 1.8,
-        duckHeight * 1.8
-      );
+    // Draw enhanced status effects with duration progress bar only
+    if (duck.statusEffects && duck.effectDurations) {
+      let progressBarColor = null;
+      let remainingTime = 0;
+      let maxDuration = 1;
+
+      // Determine primary effect (prioritize debuffs over buffs)
+      if (duck.statusEffects.includes("stunned")) {
+        progressBarColor = "#FF4444";
+        remainingTime = duck.effectDurations.stunned;
+        maxDuration = 3000; // Typical stun duration
+      } else if (duck.statusEffects.includes("splash")) {
+        progressBarColor = "#6464FF";
+        remainingTime = duck.effectDurations.splash;
+        maxDuration = 3000;
+      } else if (duck.statusEffects.includes("boosted")) {
+        progressBarColor = "#FFD700";
+        remainingTime = duck.effectDurations.boosted;
+        maxDuration = 4000; // Typical boost duration
+      } else if (duck.statusEffects.includes("immune")) {
+        progressBarColor = "#00FFFF";
+        remainingTime = duck.effectDurations.immune;
+        maxDuration = 5000;
+      } else if (duck.statusEffects.includes("magnet")) {
+        progressBarColor = "#FF64FF";
+        remainingTime = duck.effectDurations.magnet;
+        maxDuration = 4000;
+      }
+
+      if (progressBarColor && remainingTime > 0) {
+        // Draw duration progress bar at bottom of racer tag area
+        const barWidth = duckWidth * 1.6;
+        const barHeight = 3;
+        const barX = screenX - 18;
+        const barY = screenY + duckHeight + 4; // Position below the racer tag
+
+        // Background bar
+        this.ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        this.ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Progress bar
+        const progressWidth = (remainingTime / maxDuration) * barWidth;
+        this.ctx.fillStyle = progressBarColor;
+        this.ctx.fillRect(barX, barY, progressWidth, barHeight);
+      }
     }
 
     // Draw black outline first (rubber duck style)
@@ -1592,6 +2023,43 @@ class DuckRaceGame {
       this.ctx.fillStyle = "#fff";
       this.ctx.font = "bold 12px Arial";
       this.ctx.fillText(`#${duck.position}`, screenX + 50, screenY + 32);
+
+      // Draw single status effect emoji closer to position
+      let statusX = screenX + 65; // Start closer to position number
+
+      // Get current status effects from simulation data if available
+      if (this.usingSimulation && this.simulationProgress) {
+        const raceTimeMs = Date.now() - this.simulationStartTime;
+        const currentTimeStep = Math.floor(raceTimeMs / 100) * 100;
+        const currentData = this.simulationProgress.find(
+          (p) => p.time === currentTimeStep
+        );
+
+        if (currentData) {
+          const duckData = currentData.positions.find((p) => p.id === duck.id);
+          if (duckData) {
+            // Calculate current effects from events for this duck at current time
+            const currentEffects = this.calculateEffectsFromEvents(
+              duck,
+              raceTimeMs
+            );
+            this.ctx.font = "14px Arial";
+
+            // Show only the most important effect (priority order)
+            if (currentEffects.stunned) {
+              this.ctx.fillText("😵", statusX, screenY + 32);
+            } else if (currentEffects.boosted) {
+              this.ctx.fillText("�", statusX, screenY + 32);
+            } else if (currentEffects.splashAffected) {
+              this.ctx.fillText("🌊", statusX, screenY + 32);
+            } else if (currentEffects.immune) {
+              this.ctx.fillText("🛡️", statusX, screenY + 32);
+            } else if (currentEffects.magnetBoosted) {
+              this.ctx.fillText("🧲", statusX, screenY + 32);
+            }
+          }
+        }
+      }
     }
 
     // Draw floating effects
@@ -1599,35 +2067,22 @@ class DuckRaceGame {
       const progress =
         (now - effect.startTime) / (effect.endTime - effect.startTime);
       const alpha = Math.max(0, 1 - progress);
-      const yOffset = progress * 30; // Float upward more
+
+      // Calculate consistent positioning above duck head
+      // Head is at: screenX + 22, screenY - 6 with radius headSize (31)
+      // Position text above the head with some padding
+      const headCenterX = screenX + 22;
+      const headTop = screenY - 6 - headSize; // Top of head
+      const textY = headTop - 5; // 10px above head
 
       this.ctx.fillStyle = effect.color;
       this.ctx.globalAlpha = alpha;
       this.ctx.font = "bold 14px Arial";
       this.ctx.textAlign = "center";
-      this.ctx.fillText(
-        effect.text,
-        screenX + 10,
-        screenY - 35 + effect.y - yOffset
-      );
+      this.ctx.fillText(effect.text, headCenterX, textY);
       this.ctx.globalAlpha = 1;
       this.ctx.textAlign = "left";
     });
-
-    // Draw status effects text
-    if (duck.stunned > now) {
-      this.ctx.fillStyle = "#ff0000";
-      this.ctx.font = "bold 10px Arial";
-      this.ctx.fillText("STUNNED", screenX - 10, screenY - 30);
-    } else if (duck.boosted > now) {
-      this.ctx.fillStyle = "#ffff00";
-      this.ctx.font = "bold 10px Arial";
-      this.ctx.fillText("BOOST", screenX - 10, screenY - 30);
-    } else if (duck.immune > now) {
-      this.ctx.fillStyle = "#00ffff";
-      this.ctx.font = "bold 10px Arial";
-      this.ctx.fillText("IMMUNE", screenX - 10, screenY - 30);
-    }
   }
 
   drawUI() {
@@ -1645,6 +2100,12 @@ class DuckRaceGame {
   stopRace() {
     this.raceActive = false;
     this.gameLoopRunning = false;
+
+    // Reset simulation state
+    this.usingSimulation = false;
+    this.simulatedDucks = null;
+    this.simulationStandings = null;
+    this.lastSimulationUpdate = 0;
 
     // Stop background music
     if (window.stopBackgroundMusic) {
@@ -1681,7 +2142,6 @@ class DuckRaceGame {
   endRace() {
     this.raceActive = false;
     // Animation will stop naturally when raceActive becomes false
-    // No longer need to clear skillTimer as we use individual duck timers
 
     // Stop background music
     if (window.stopBackgroundMusic) {
@@ -1704,33 +2164,65 @@ class DuckRaceGame {
 
     // Announce winner
     if (this.ducks && this.ducks.length > 0) {
-      const winner = this.ducks.reduce((prev, curr) =>
-        curr.finishTime < prev.finishTime ? curr : prev
-      );
+      let winner;
 
-      this.log(`🎉 WINNER: ${winner.name}! 🎉`, "winner");
-      this.log(
-        `Final time: ${(winner.finishTime / 1000).toFixed(2)} seconds`,
-        "winner"
-      );
+      if (this.usingSimulation && this.simulationStandings) {
+        // Use simulation results for winner
+        const winnerData = this.simulationStandings[0];
+        winner =
+          this.ducks.find((d) => d.id === winnerData.id) || this.ducks[0];
+
+        this.log(`🎉 WINNER: ${winner.name}! 🎉`, "winner");
+        this.log(
+          `Final time: ${(winnerData.finishTime / 1000).toFixed(2)} seconds`,
+          "winner"
+        );
+
+        // Log simulation statistics
+        this.log("📊 Final Standings (Simulated):");
+        this.simulationStandings.forEach((standing, index) => {
+          this.log(
+            `${index + 1}. ${standing.name} - ${(
+              standing.finishTime / 1000
+            ).toFixed(2)}s`
+          );
+        });
+      } else {
+        // Use traditional logic for winner
+        winner = this.ducks.reduce((prev, curr) =>
+          curr.finishTime < prev.finishTime ? curr : prev
+        );
+
+        this.log(`🎉 WINNER: ${winner.name}! 🎉`, "winner");
+        this.log(
+          `Final time: ${(winner.finishTime / 1000).toFixed(2)} seconds`,
+          "winner"
+        );
+
+        // Show final standings
+        const standings = [...this.ducks].sort(
+          (a, b) => a.finishTime - b.finishTime
+        );
+        this.log("📊 Final Standings:");
+        standings.forEach((duck, index) => {
+          this.log(
+            `${index + 1}. ${duck.name} - ${(duck.finishTime / 1000).toFixed(
+              2
+            )}s`
+          );
+        });
+      }
     }
 
-    // Show final standings
-    const standings = [...this.ducks].sort(
-      (a, b) => a.finishTime - b.finishTime
-    );
-    this.log("📊 Final Standings:");
-    standings.forEach((duck, index) => {
-      this.log(
-        `${index + 1}. ${duck.name} - ${(duck.finishTime / 1000).toFixed(2)}s`
-      );
-    });
-
     // Publish results to Discord webhook if configured
-    this.publishToDiscord(standings);
+    const finalStandings =
+      this.usingSimulation && this.simulationStandings
+        ? this.simulationStandings
+        : [...this.ducks].sort((a, b) => a.finishTime - b.finishTime);
+    this.publishToDiscord(finalStandings);
   }
 
-  async publishToDiscord(standings) {
+  publishToDiscord(standings) {
     if (
       !this.settings.discordWebhookUrl ||
       this.settings.discordWebhookUrl.trim() === ""
@@ -1782,19 +2274,25 @@ class DuckRaceGame {
         embeds: [embed],
       };
 
-      const response = await fetch(this.settings.discordWebhookUrl, {
+      // Use promise-based fetch instead of await
+      fetch(this.settings.discordWebhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        this.log("📤 Results published to Discord!", "skill");
-      } else {
-        this.log("❌ Failed to publish to Discord", "skill");
-      }
+      })
+        .then((response) => {
+          if (response.ok) {
+            this.log("📤 Results published to Discord!", "skill");
+          } else {
+            this.log("❌ Failed to publish to Discord", "skill");
+          }
+        })
+        .catch((error) => {
+          console.error("Discord webhook error:", error);
+          this.log("❌ Error publishing to Discord", "skill");
+        });
     } catch (error) {
       console.error("Discord webhook error:", error);
       this.log("❌ Error publishing to Discord", "skill");
