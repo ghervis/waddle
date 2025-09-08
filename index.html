@@ -119,13 +119,16 @@
 
     <div class="main-content">
       <div class="title-container">
-        <input
-          type="text"
-          id="raceTitle"
-          class="race-title-input"
-          value="Waddle Waddle"
-          maxlength="50"
-        />
+        <div class="title-input-wrapper">
+          <input
+            type="text"
+            id="raceTitle"
+            class="race-title-input"
+            value="Waddle Waddle"
+            maxlength="50"
+          />
+          <button class="edit-title-btn" onclick="focusRaceTitle()">✏️</button>
+        </div>
       </div>
       <div class="game-container">
         <canvas id="gameCanvas" width="800" height="400"></canvas>
@@ -143,13 +146,13 @@
       }
 
       // Volume control functionality
-      let isMuted = localStorage.getItem('volumeMuted') === 'true';
+      let isMuted = localStorage.getItem("volumeMuted") === "true";
       const backgroundMusic = document.getElementById("backgroundMusic");
       const volumeBtn = document.getElementById("volumeBtn");
 
       function toggleVolume() {
         isMuted = !isMuted;
-        localStorage.setItem('volumeMuted', isMuted);
+        localStorage.setItem("volumeMuted", isMuted);
         backgroundMusic.muted = isMuted;
         volumeBtn.textContent = isMuted ? "🔇" : "🔊";
         volumeBtn.classList.toggle("muted", isMuted);
@@ -173,6 +176,13 @@
         backgroundMusic.pause();
         backgroundMusic.currentTime = 0;
       };
+
+      // Function to focus the race title input when pencil is clicked
+      function focusRaceTitle() {
+        const raceTitle = document.getElementById("raceTitle");
+        raceTitle.focus();
+        raceTitle.select();
+      }
     </script>
     <script src="race-simulator.js"></script>
     <script src="duck-race.js"></script>

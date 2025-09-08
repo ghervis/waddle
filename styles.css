@@ -201,10 +201,10 @@ body {
   align-items: center;
   padding: 20px;
   position: relative;
+  min-height: fit-content;
 }
 
 .title-container {
-  margin-bottom: 20px;
   position: relative;
   display: inline-block;
 }
@@ -260,6 +260,37 @@ body {
 .race-title-input:disabled:hover {
   border-color: transparent;
   background: transparent;
+}
+
+/* Title input wrapper and edit button */
+.title-input-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+}
+
+.edit-title-btn {
+  background: none;
+  border: none;
+  /* border: 2px solid rgba(52, 152, 219, 0.3); */
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.edit-title-btn:hover {
+  background: rgba(52, 152, 219, 0.1);
+  border-color: #3498db;
+  transform: translateY(-1px);
+}
+
+.edit-title-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
@@ -758,16 +789,14 @@ canvas {
     min-width: unset;
     max-width: unset;
     width: 100%;
-    order: 2;
     padding: 15px 0;
-    max-height: 50vh;
     overflow-y: hidden;
-    text-align: center; /* Center sidebar content */
     display: flex;
     flex-direction: column;
     justify-content: flex-start; /* Start content from top */
-    top: 5%;
+    top: 2%;
     height: 100%;
+    order: 2;
   }
 
   .sidebar-header {
@@ -800,12 +829,12 @@ canvas {
   }
 
   .main-content {
-    order: 1;
     padding: 10px;
     flex: 1;
-    min-height: 55vh;
-    max-height: 55vh; /* Prevent overflow */
+    /* min-height: 55vh; */
+    /* max-height: 55vh; */
     overflow: hidden;
+    order: 1;
   }
 
   canvas {
@@ -820,10 +849,6 @@ canvas {
     margin: 0;
     width: 100%;
     box-sizing: border-box;
-  }
-
-  .title-container {
-    margin-bottom: 10px;
   }
 
   .title-container h1 {
@@ -849,6 +874,10 @@ canvas {
     margin-left: auto;
     border-radius: 5px;
   }
+
+  .edit-title-btn {
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -859,7 +888,6 @@ canvas {
 
   .sidebar {
     padding: 15px 0;
-    max-height: 50vh;
     text-align: left;
     display: flex;
     flex-direction: column;
@@ -885,7 +913,6 @@ canvas {
 
   .main-content {
     padding: 5px;
-    max-height: 50vh;
     overflow: hidden;
   }
 
@@ -973,5 +1000,22 @@ canvas {
   .dialog-buttons button {
     padding: 12px 20px;
     font-size: 14px;
+  }
+
+  .title-input-wrapper {
+    gap: 8px;
+  }
+
+  .race-title-input {
+    font-size: 24px;
+    min-width: 250px;
+  }
+
+  .edit-title-btn {
+    font-size: 20px;
+    position: absolute;
+    right: 12%;
+    top: 18%;
+    pointer-events: none;
   }
 }
