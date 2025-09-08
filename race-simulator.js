@@ -367,7 +367,7 @@ class RaceDuck {
   }
 }
 
-function simulateRace(participants, mode = "casual") {
+function simulateRace({ participants, mode }) {
   console.log(
     `🏁 Starting ${mode} race simulation with ${participants.length} ducks`
   );

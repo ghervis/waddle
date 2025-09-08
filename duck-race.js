@@ -97,7 +97,10 @@ class DuckRaceGame {
 
     // Run the simulation
     try {
-      const simulationResult = window.simulateRace(participants);
+      const simulationResult = window.simulateRace({
+        participants,
+        mode: "casual",
+      });
 
       if (simulationResult) {
         console.log("✅ Simulation completed successfully:", simulationResult);
