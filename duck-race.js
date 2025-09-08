@@ -1120,7 +1120,7 @@ class DuckRaceGame {
     const dialog = document.createElement("div");
     dialog.className = "settings-dialog";
     dialog.innerHTML = `
-      <div class="dialog-content" style=" min-width: 400px; position: relative;">
+      <div class="dialog-content" style="position: relative;">
         <button class="dialog-close-btn" onclick="this.closest('.settings-dialog').remove()">×</button>
         <h3>⚙️ Settings</h3>
         <label for="discordWebhookUrl" style="display: block; margin-bottom: 5px; font-weight: bold;">Discord Webhook URL:</label>
