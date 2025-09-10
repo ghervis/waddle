@@ -34,9 +34,7 @@ class DuckRaceGame {
     this.gameLoopRunning = false; // Prevent double execution
 
     // Initialize duck names pool
-    this.duckNamePool = [];
     this.defaultRacerNames = this.loadDefaultRacerNames();
-    this.loadDuckNames();
 
     this.generateRankedRacerId();
 
@@ -775,70 +773,22 @@ class DuckRaceGame {
       return JSON.parse(saved);
     }
 
-    // Generate new default names if none exist
-    const fallbackNames = [
-      "Quacky",
-      "Splash",
-      "Waddle",
-      "Feather",
-      "Ripple",
-      "Bubbles",
-      "Sunny",
-      "Lucky",
-      "Pepper",
-      "Cookie",
-      "Rainbow",
-      "Thunder",
-      "Sparkle",
-      "Captain",
-      "Hero",
-      "Rocket",
-    ];
-
     const defaultNames = [];
     for (let i = 0; i < 5; i++) {
-      const randomIndex = Math.floor(Math.random() * fallbackNames.length);
-      defaultNames.push(fallbackNames[randomIndex]);
+      const randomIndex = Math.floor(Math.random() * window.duckNames.length);
+      defaultNames.push(window.duckNames[randomIndex]);
     }
 
     localStorage.setItem("defaultRacerNames", JSON.stringify(defaultNames));
     return defaultNames;
   }
 
-  async loadDuckNames() {
-    try {
-      const response = await fetch("./duck-names.json");
-      const data = await response.json();
-      this.duckNamePool = data.names;
-    } catch (error) {
-      console.log("Could not load duck names, using fallback names");
-      this.duckNamePool = [
-        "Quacky",
-        "Splash",
-        "Waddle",
-        "Feather",
-        "Ripple",
-        "Bubbles",
-        "Sunny",
-        "Lucky",
-        "Pepper",
-        "Cookie",
-        "Rainbow",
-        "Thunder",
-        "Sparkle",
-        "Captain",
-        "Hero",
-        "Rocket",
-      ];
-    }
-  }
-
   getRandomDuckName() {
-    if (this.duckNamePool.length === 0) {
+    if (window.duckNames.length === 0) {
       return "Duck";
     }
-    const randomIndex = Math.floor(Math.random() * this.duckNamePool.length);
-    return this.duckNamePool[randomIndex];
+    const randomIndex = Math.floor(Math.random() * window.duckNames.length);
+    return window.duckNames[randomIndex];
   }
 
   saveCustomRacers() {
@@ -1529,74 +1479,83 @@ class DuckRaceGame {
     const imageData = dialog ? dialog.uploadedImage : null;
     const isRankedModeRacer = dialog ? dialog.isRankedModeRacer : false;
 
-    if (name.trim()) {
-      // Convert id to string for comparison
-      const racerId = String(id);
+    if (!name.trim()) {
+      return;
+    }
 
-      if (isRankedModeRacer) {
-        // Handle ranked mode racer (update ducks array and duck data arrays)
-        const duckIndex = this.ducks.findIndex((d) => String(d.id) === racerId);
-        if (duckIndex !== -1) {
-          // Ensure unique name (exclude current duck from check)
-          let uniqueName = name;
-          let counter = 1;
-          while (
-            this.ducks.some(
-              (duck, index) => index !== duckIndex && duck.name === uniqueName
-            )
-          ) {
-            uniqueName = `${name} (${counter})`;
-            counter++;
-          }
+    // Convert id to string for comparison
+    const racerId = String(id);
 
-          // Update the duck
-          this.ducks[duckIndex].name = uniqueName;
-          this.ducks[duckIndex].profilePicture = imageData;
+    if (isRankedModeRacer) {
+      // Handle ranked mode racer (update ducks array and duck data arrays)
+      const duckIndex = this.ducks.findIndex((d) => String(d.id) === racerId);
 
-          // Update the duck data arrays for consistency
-          this.duckNames[duckIndex] = uniqueName;
-          this.duckProfilePictures[duckIndex] = imageData;
-
-          // Update the leaderboard to reflect changes
-          this.updateLeaderboard();
-          this.draw();
-
-          console.log("Updated ranked mode racer:", uniqueName);
-        }
-      } else {
-        // Handle custom racer (original logic)
-        const racerIndex = this.customRacers.findIndex(
-          (r) => String(r.id) === racerId
-        );
-        if (racerIndex !== -1) {
-          // Ensure unique name (exclude current racer from check)
-          let uniqueName = name;
-          let counter = 1;
-          while (
-            this.customRacers.some(
-              (racer, index) =>
-                index !== racerIndex && racer.name === uniqueName
-            )
-          ) {
-            uniqueName = `${name} (${counter})`;
-            counter++;
-          }
-
-          this.customRacers[racerIndex].name = uniqueName;
-          this.customRacers[racerIndex].profilePicture = imageData;
-          this.saveCustomRacers();
-          this.updateRacersList();
-
-          // Update active duck's profile picture if race is running
-          if (this.raceActive && this.ducks[racerIndex]) {
-            this.ducks[racerIndex].name = uniqueName;
-            this.ducks[racerIndex].profilePicture = imageData;
-          }
-        }
+      if (-1 === duckIndex) {
+        document.querySelector(".racer-dialog").remove();
+        return;
       }
 
+      // Ensure unique name (exclude current duck from check)
+      let uniqueName = name;
+      let counter = 1;
+      while (
+        this.ducks.some(
+          (duck, index) => index !== duckIndex && duck.name === uniqueName
+        )
+      ) {
+        uniqueName = `${name} (${counter})`;
+        counter++;
+      }
+
+      // Update the duck
+      this.ducks[duckIndex].name = uniqueName;
+      this.ducks[duckIndex].profilePicture = imageData;
+
+      // Update the duck data arrays for consistency
+      this.duckNames[duckIndex] = uniqueName;
+      this.duckProfilePictures[duckIndex] = imageData;
+
+      // Update the leaderboard to reflect changes
+      this.updateLeaderboard();
+      this.draw();
+
+      console.log("Updated ranked mode racer:", uniqueName);
+
       document.querySelector(".racer-dialog").remove();
+
+      return;
     }
+
+    // Handle custom racer (original logic)
+    const racerIndex = this.customRacers.findIndex(
+      (r) => String(r.id) === racerId
+    );
+    if (racerIndex !== -1) {
+      // Ensure unique name (exclude current racer from check)
+      let uniqueName = name;
+      let counter = 1;
+      while (
+        this.customRacers.some(
+          (racer, index) => index !== racerIndex && racer.name === uniqueName
+        )
+      ) {
+        uniqueName = `${name} (${counter})`;
+        counter++;
+      }
+
+      this.customRacers[racerIndex].name = uniqueName;
+      this.customRacers[racerIndex].profilePicture = imageData;
+      this.saveCustomRacers();
+      this.updateRacersList();
+
+      // Update active duck's profile picture if race is running
+      if (this.raceActive && this.ducks[racerIndex]) {
+        this.ducks[racerIndex].name = uniqueName;
+        this.ducks[racerIndex].profilePicture = imageData;
+      }
+    }
+
+    document.querySelector(".racer-dialog").remove();
   }
 
   randomizeRacerColor(id) {
@@ -1661,7 +1620,7 @@ class DuckRaceGame {
   }
 
   async createOnlineRankedRace() {
-    const upsertRacerUrl = `https://waddle-db.ghervis.workers.dev/api/v1/ranked-race?okey=${window.ownerKey}&wrc=${window.rankedRacerId}`;
+    const upsertRacerUrl = `https://waddle-db.ghervis.workers.dev/api/v1/ranked-race?okey=${window.okey}&wrc=${window.rankedRacerId}`;
     const corsProxyUpsertRacerUrl = `https://corsproxy.io/?${encodeURIComponent(
       upsertRacerUrl
     )}`;
@@ -3074,11 +3033,11 @@ class DuckRaceGame {
       return;
     }
 
-    const ownerKey = `OKEY-${this.nanoid(16)}`;
-    window.localStorage.setItem("ownerKey", data.ownerKey);
-    window.ownerKey = ownerKey;
+    const okey = `OKEY-${this.nanoid(16)}`;
+    window.localStorage.setItem("okey", okey);
+    window.okey = okey;
 
-    const generateProfileUrl = `https://waddle-db.ghervis.workers.dev/api/v1/generate-profile?okey=${window.ownerKey}`;
+    const generateProfileUrl = `https://waddle-db.ghervis.workers.dev/api/v1/generate-profile?okey=${window.okey}`;
     const corsProxyGenerateProfileUrl = `https://corsproxy.io/?${encodeURIComponent(
       generateProfileUrl
     )}`;
@@ -3108,7 +3067,7 @@ class DuckRaceGame {
       "rankedRacerProfilePicture"
     );
     window.rankedRacerMmr = window.localStorage.getItem("rankedRacerMmr");
-    window.ownerKey = window.localStorage.getItem("ownerKey");
+    window.okey = window.localStorage.getItem("okey");
   }
 
   nanoid(t = 21) {
