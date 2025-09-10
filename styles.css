@@ -91,6 +91,106 @@ body {
   border-color: #000;
 }
 
+.start-btn[disabled] {
+  filter: brightness(0.7);
+}
+
+.start-btn[disabled]:hover {
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* Race Mode Toggle Slider */
+.race-mode-toggle {
+  margin-right: 10px;
+  user-select: none;
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-label {
+  display: inline-block;
+  width: 65px;
+  height: 26px;
+  position: relative;
+  background: #228b22;
+  border-radius: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 0.3s ease;
+  border: 2px solid #1a6b1a;
+}
+
+.toggle-label:hover {
+  transform: scale(1.05);
+}
+
+.toggle-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: bold;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  color: white;
+}
+
+.toggle-text.casual {
+  opacity: 1;
+  left: 68%;
+}
+
+.toggle-text.ranked {
+  opacity: 0;
+  left: 32%;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  z-index: 1;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* When checked (Ranked mode) */
+.toggle-input:checked + .toggle-label {
+  background: #dc143c;
+  border-color: #a0102a;
+}
+
+.toggle-input:checked + .toggle-label .toggle-slider {
+  transform: translateX(38px);
+}
+
+.toggle-input:checked + .toggle-label .toggle-text.casual {
+  opacity: 0;
+}
+
+.toggle-input:checked + .toggle-label .toggle-text.ranked {
+  opacity: 1;
+}
+
+/* Disabled state */
+.toggle-input:disabled + .toggle-label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.toggle-input:disabled + .toggle-label:hover {
+  transform: none;
+}
+
 .header-btn.hidden {
   display: none;
 }
@@ -894,7 +994,7 @@ canvas {
     overflow-y: hidden;
     /* Position sidebar to start from middle of available space */
     box-sizing: border-box;
-    top: unset;
+    top: 1%;
   }
 
   .sidebar-content {
@@ -905,7 +1005,6 @@ canvas {
     position: sticky;
     top: 0;
     text-align: center;
-    margin-bottom: 15px;
     padding-bottom: 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     background: white;
@@ -1014,8 +1113,35 @@ canvas {
   .edit-title-btn {
     font-size: 20px;
     position: absolute;
-    right: 12%;
+    right: 15%;
     top: 18%;
     pointer-events: none;
+  }
+
+  /* Mobile race mode toggle */
+  .race-mode-toggle {
+    margin-right: 8px;
+  }
+
+  .toggle-label {
+    width: 70px;
+    height: 28px;
+    border-radius: 14px;
+  }
+
+  .toggle-text {
+    font-size: 10px;
+  }
+
+  .toggle-slider {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+  }
+
+  .toggle-input:checked + .toggle-label .toggle-slider {
+    transform: translateX(40px);
   }
 }

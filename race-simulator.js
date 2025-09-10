@@ -44,11 +44,11 @@ const RACE_CONFIG = {
 };
 
 class RaceDuck {
-  constructor(participant, index, mode = "casual") {
+  // eslint-disable-next-line no-unused-vars
+  constructor(participant, index, _mode = "casual") {
     this.id = participant.id;
-    this.name = mode === "casual" ? participant.name : `Duck ${index + 1}`;
-    this.profilePicture =
-      mode === "casual" ? participant.profile || null : null;
+    this.name = participant.name || `Duck ${index + 1}`;
+    this.profilePicture = participant.profile || null;
 
     // Race state
     this.metersTraveled = 0;

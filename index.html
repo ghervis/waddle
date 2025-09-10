@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Waddle</title>
-    <meta name="description" content="Waddle waddle..." />
+    <meta name="description" content="🦆 Waddle waddle..." />
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -65,6 +65,14 @@
       <div class="sidebar-header">
         <h2>🦆 Racers</h2>
         <div class="header-buttons">
+          <div class="race-mode-toggle">
+            <input type="checkbox" id="raceModeToggle" class="toggle-input" />
+            <label for="raceModeToggle" class="toggle-label">
+              <span class="toggle-text casual">Casual</span>
+              <span class="toggle-text ranked">Ranked</span>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
           <button id="addRacerBtn" class="header-btn add-btn">➕ Add</button>
           <button id="startBtn" class="header-btn start-btn">
             🏁 <span class="startBtn-text">Start</span>
@@ -183,6 +191,50 @@
         raceTitle.focus();
         raceTitle.select();
       }
+
+      // Race mode toggle functionality
+      const raceModeToggle = document.getElementById("raceModeToggle");
+      const startBtn = document.getElementById("startBtn");
+
+      // Load saved race mode preference
+      const savedRaceMode = localStorage.getItem("raceMode") || "casual";
+      raceModeToggle.checked = savedRaceMode === "ranked";
+      updateStartButtonColor();
+
+      raceModeToggle.addEventListener("change", async function () {
+        const raceMode = this.checked ? "ranked" : "casual";
+        console.log("raceMode changed to:", raceMode);
+        localStorage.setItem("raceMode", raceMode);
+
+        if ("ranked" === raceMode) {
+          await window.game.generateRankedRacerId();
+        }
+        updateStartButtonColor();
+
+        // Update the racers display immediately when mode changes
+        if (window.game) {
+          window.game.stopRace();
+          window.game.updateRacersList();
+        }
+      });
+
+      function updateStartButtonColor() {
+        if (raceModeToggle.checked) {
+          // Ranked mode - crimson color
+          startBtn.style.background = "#DC143C";
+          startBtn.style.borderColor = "#a0102a";
+        } else {
+          // Casual mode - green color
+          startBtn.style.background = "#228B22";
+          startBtn.style.borderColor = "#1a6b1a";
+        }
+      } // Function to disable/enable race mode toggle based on race state
+      function updateRaceModeToggleState(raceActive) {
+        raceModeToggle.disabled = raceActive;
+      }
+
+      // Make the function available globally for duck-race.js
+      window.updateRaceModeToggleState = updateRaceModeToggleState;
     </script>
     <script src="race-simulator.js"></script>
     <script src="duck-race.js"></script>
