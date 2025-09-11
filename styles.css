@@ -617,7 +617,6 @@ canvas {
 
 .skill-list summary {
   cursor: pointer;
-  padding: 10px 0;
   user-select: none;
 }
 
@@ -721,6 +720,11 @@ canvas {
   padding: 10px;
   margin-top: 15px;
   border: 1px solid #ddd;
+}
+
+.leaderboard-list summary {
+  cursor: pointer;
+  user-select: none;
 }
 
 .global-leaderboard {

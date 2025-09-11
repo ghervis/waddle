@@ -3294,11 +3294,11 @@ class DuckRaceGame {
     globalLeaderboard.innerHTML = "";
 
     window.leaderboard.forEach((entry, index) => {
-      const rank = index + 1;
+      const rank = entry.rank;
       const isUserEntry = entry.id === window.rankedRacerId;
 
       // Add divider before user entry if it's the 11th entry
-      if (rank === 11 && isUserEntry) {
+      if (index === 10 && isUserEntry) {
         const divider = document.createElement("hr");
         divider.className = "leaderboard-divider";
         globalLeaderboard.appendChild(divider);
