@@ -1327,7 +1327,13 @@ class DuckRaceGame {
         
         <div style="margin: 20px 0; padding: 15px; border: 2px solid #e74c3c; border-radius: 8px; background: rgba(231, 76, 60, 0.1);">
           <h4 style="margin: 0 0 10px 0; color: #e74c3c;">⚠️ Danger Zone</h4>
-          <button id="resetDataBtn" class="reset-data-btn" onmousedown="window.game.startResetHold()" onmouseup="window.game.stopResetHold()" onmouseleave="window.game.stopResetHold()">
+          <button id="resetDataBtn" class="reset-data-btn" 
+            onmousedown="window.game.startResetHold()" 
+            onmouseup="window.game.stopResetHold()" 
+            onmouseleave="window.game.stopResetHold()"
+            ontouchstart="window.game.startResetHold(event)" 
+            ontouchend="window.game.stopResetHold()" 
+            ontouchcancel="window.game.stopResetHold()">
             <span id="resetBtnText">🗑️ Hold to Reset All Data (4s)</span>
             <div id="resetProgress" class="reset-progress"></div>
           </button>
@@ -1363,7 +1369,17 @@ class DuckRaceGame {
     this.saveSettings();
   }
 
-  startResetHold() {
+  startResetHold(event) {
+    // Prevent default behavior for touch events to avoid conflicts
+    if (event && event.type.startsWith("touch")) {
+      event.preventDefault();
+    }
+
+    // Don't start if already running
+    if (this.resetHoldInterval) {
+      return;
+    }
+
     this.resetHoldTimer = 0;
     this.resetHoldInterval = setInterval(() => {
       this.resetHoldTimer += 100;

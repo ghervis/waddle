@@ -108,8 +108,12 @@
           </div>
         </details>
 
-        <h3 class="race-log-header">Race Log</h3>
-        <div id="log" class="log"></div>
+        <details class="race-log-list" id="raceLogSection">
+          <summary>
+            <h3 style="display: inline">📋 Race Log</h3>
+          </summary>
+          <div id="log" class="log"></div>
+        </details>
 
         <details
           class="leaderboard-list"
@@ -254,20 +258,26 @@
         const leaderboardSection =
           document.getElementById("leaderboardSection");
         const skillsSection = document.getElementById("skillsSection");
+        const raceLogSection = document.getElementById("raceLogSection");
 
-        if (leaderboardSection && skillsSection) {
-          leaderboardSection.addEventListener("toggle", function () {
+        const sections = [
+          skillsSection,
+          raceLogSection,
+          leaderboardSection,
+        ].filter(Boolean);
+
+        sections.forEach((section) => {
+          section.addEventListener("toggle", function () {
             if (this.open) {
-              skillsSection.removeAttribute("open");
+              // Close all other sections when this one opens
+              sections.forEach((otherSection) => {
+                if (otherSection !== this) {
+                  otherSection.removeAttribute("open");
+                }
+              });
             }
           });
-
-          skillsSection.addEventListener("toggle", function () {
-            if (this.open) {
-              leaderboardSection.removeAttribute("open");
-            }
-          });
-        }
+        });
       });
 
       // Initial section visibility update

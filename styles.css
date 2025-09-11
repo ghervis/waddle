@@ -234,6 +234,10 @@ body {
   display: none;
 }
 
+.sidebar.collapsed .race-log-list {
+  display: none;
+}
+
 .sidebar.collapsed .leaderboard-list {
   display: none;
 }
@@ -722,6 +726,14 @@ canvas {
   border: 1px solid #ddd;
 }
 
+.race-log-list {
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 15px;
+  border: 1px solid #ddd;
+}
+
 .leaderboard-list summary {
   cursor: pointer;
   user-select: none;
@@ -956,7 +968,7 @@ canvas {
     min-width: unset;
     max-width: unset;
     width: 100%;
-    padding: 15px 0;
+    padding: 15px 0 45px 0;
     overflow-y: hidden;
     display: flex;
     flex-direction: column;
@@ -1054,7 +1066,7 @@ canvas {
   }
 
   .sidebar {
-    padding: 15px 0;
+    padding: 15px 0 45px 0;
     text-align: left;
     display: flex;
     flex-direction: column;
