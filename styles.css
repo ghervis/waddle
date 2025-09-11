@@ -673,12 +673,13 @@ canvas {
 
 .log {
   background: #f8f9fa;
-  border-radius: 10px;
+  border-radius: 2px;
   padding: 15px;
   max-height: 150px;
   overflow-y: auto;
   font-size: 12px;
   border: 2px solid #e9ecef;
+  margin-top: 10px;
 }
 
 .log-entry {
@@ -697,7 +698,7 @@ canvas {
   font-weight: bold;
   background: #fef9e7;
   border-radius: 3px;
-  padding: 2px 5px;
+  padding: 2px 0px;
 }
 
 .log-winner {
@@ -770,13 +771,29 @@ canvas {
 
 .leaderboard-entry .name {
   flex: 1;
-  margin-left: 8px;
+  margin-left: 5px;
   color: #333;
 }
 
 .leaderboard-entry .mmr {
   font-weight: bold;
   color: #007bff;
+}
+
+.leaderboard-entry .online-leaderboard-profile-picture {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  flex-shrink: 0;
+  background-color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  margin-left: 8px;
 }
 
 .leaderboard-divider {
@@ -1146,6 +1163,11 @@ canvas {
   .race-log {
     margin-bottom: 20px;
     padding: 10px 0;
+  }
+
+  .leaderboard {
+    padding: 0;
+    border-radius: 2px;
   }
 
   .leaderboard h3,

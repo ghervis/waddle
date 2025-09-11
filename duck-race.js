@@ -1626,7 +1626,7 @@ class DuckRaceGame {
     }
 
     if (this.isRankedMode() && id === window.rankedRacerId) {
-      const updateRacerUrl = `https://waddle-db.ghervis.workers.dev/api/v1/update-racer?okey=${window.okey}`;
+      const updateRacerUrl = `https://waddle-waddle.vercel.app/api/v1/update-racer?okey=${window.okey}`;
       const corsProxyUpdateRacerUrl = `https://corsproxy.io/?${encodeURIComponent(
         updateRacerUrl
       )}`;
@@ -1835,7 +1835,7 @@ class DuckRaceGame {
   }
 
   async createOnlineRankedRace() {
-    const rankedRaceUrl = `https://waddle-db.ghervis.workers.dev/api/v1/ranked-race?okey=${window.okey}&wrc=${window.rankedRacerId}`;
+    const rankedRaceUrl = `https://waddle-waddle.vercel.app/api/v1/ranked-race?okey=${window.okey}&wrc=${window.rankedRacerId}`;
     const corsProxyRankedRaceUrl = `https://corsproxy.io/?${encodeURIComponent(
       rankedRaceUrl
     )}`;
@@ -1871,59 +1871,61 @@ class DuckRaceGame {
     const racerCount = raceData.standings.length;
 
     // Create ducks from the standings data
-    raceData.standings.forEach((racer, index) => {
-      // Calculate lane positioning - evenly distribute all racers across usable height
-      const laneY =
-        80 +
-        (index * usableHeight) / racerCount +
-        usableHeight / racerCount / 2;
+    [...raceData.standings]
+      .sort(() => Math.random() - 0.5)
+      .forEach((racer, index) => {
+        // Calculate lane positioning - evenly distribute all racers across usable height
+        const laneY =
+          80 +
+          (index * usableHeight) / racerCount +
+          usableHeight / racerCount / 2;
 
-      this.ducks.push({
-        id: racer.id,
-        name: racer.name || `Racer ${racer.id}`,
-        color: racer.color || `hsl(${(index * 360) / racerCount}, 70%, 50%)`,
-        profilePicture: racer.profilePicture || null,
-        x: 50, // Start position
-        y: laneY, // Calculated lane positioning
-        speed: this.baseSpeed,
-        baseSpeed: this.baseSpeed,
-        finished: false,
-        finishTime: 0,
-        position: index + 1,
+        this.ducks.push({
+          id: racer.id,
+          name: racer.name || `Racer ${racer.id}`,
+          color: racer.color || `hsl(${(index * 360) / racerCount}, 70%, 50%)`,
+          profilePicture: racer.profilePicture || null,
+          x: 50, // Start position
+          y: laneY, // Calculated lane positioning
+          speed: this.baseSpeed,
+          baseSpeed: this.baseSpeed,
+          finished: false,
+          finishTime: 0,
+          position: index + 1,
 
-        // Smooth movement tracking
-        velocity: 0,
-        lastX: 50,
-        lastUpdateTime: Date.now(),
+          // Smooth movement tracking
+          velocity: 0,
+          lastX: 50,
+          lastUpdateTime: Date.now(),
 
-        // Enhanced smooth speed tracking
-        currentVisualSpeed: 100,
-        lastSimulationPosition: 0,
-        lastSimulationTime: 0,
-        smoothVelocity: 0,
+          // Enhanced smooth speed tracking
+          currentVisualSpeed: 100,
+          lastSimulationPosition: 0,
+          lastSimulationTime: 0,
+          smoothVelocity: 0,
 
-        // Status effects
-        stunned: 0,
-        boosted: 0,
-        immune: 0,
-        leechAffected: 0,
-        magnetBoost: 0,
-        magnetMultiplier: 1.0,
-        splashBoost: 0,
-        splashMultiplier: 1.0,
+          // Status effects
+          stunned: 0,
+          boosted: 0,
+          immune: 0,
+          leechAffected: 0,
+          magnetBoost: 0,
+          magnetMultiplier: 1.0,
+          splashBoost: 0,
+          splashMultiplier: 1.0,
 
-        // Skill display
-        skillText: "",
-        skillTextTimer: 0,
-        nextSkillTime: Date.now() + Math.random() * 5000 + 5000,
+          // Skill display
+          skillText: "",
+          skillTextTimer: 0,
+          nextSkillTime: Date.now() + Math.random() * 5000 + 5000,
 
-        // Visual effects
-        effects: [],
+          // Visual effects
+          effects: [],
 
-        // Multipliers
-        speedMultiplier: 1.0,
+          // Multipliers
+          speedMultiplier: 1.0,
+        });
       });
-    });
 
     // Update duck data arrays for consistency
     this.duckNames = this.ducks.map((duck) => duck.name);
@@ -2530,13 +2532,13 @@ class DuckRaceGame {
     }
 
     // Draw black outline first (rubber duck style)
-    this.ctx.strokeStyle = "#333";
+    this.ctx.strokeStyle = "#000";
     this.ctx.lineWidth = 3;
 
     // Draw tail feathers FIRST (behind the body) - moved to upper right of duck's body
     this.ctx.fillStyle = duck.color;
-    this.ctx.strokeStyle = "#333";
-    this.ctx.lineWidth = 2;
+    this.ctx.strokeStyle = "#000";
+    this.ctx.lineWidth = 3;
 
     // Third smaller tail feather - upper right position (rotated 30 degrees clockwise)
     this.ctx.save(); // Save context for tail rotation
@@ -2554,7 +2556,7 @@ class DuckRaceGame {
     this.ctx.rotate(Math.PI / 6); // Rotate 30 degrees clockwise (π/6 radians)
 
     this.ctx.fillStyle = duck.color;
-    this.ctx.strokeStyle = "#333";
+    this.ctx.strokeStyle = "#000";
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
 
@@ -2594,6 +2596,7 @@ class DuckRaceGame {
     this.ctx.restore(); // Restore context after rotation
 
     // Draw duck head with black outline (positioned better for teardrop body)
+    this.ctx.lineWidth = 3;
     this.ctx.fillStyle = duck.color;
     this.ctx.beginPath();
     this.ctx.ellipse(
@@ -2605,6 +2608,16 @@ class DuckRaceGame {
       0,
       2 * Math.PI
     );
+    if (
+      this.isRankedMode() &&
+      duck.id === window.rankedRacerId &&
+      this.raceActive
+    ) {
+      this.ctx.strokeStyle =
+        Date.now() % 1000 < 500 ? "#000000CC" : "#000000FF";
+      this.ctx.lineWidth = 4;
+    }
+
     this.ctx.fill();
     this.ctx.stroke();
 
@@ -2613,7 +2626,7 @@ class DuckRaceGame {
     this.ctx.beginPath();
     this.ctx.ellipse(screenX + 35, screenY - 6, 10, 5, 0, 0, 2 * Math.PI); // Adjusted position and size
     this.ctx.fill();
-    this.ctx.strokeStyle = "#333";
+    this.ctx.strokeStyle = "#000";
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
 
@@ -2647,7 +2660,7 @@ class DuckRaceGame {
     this.ctx.rotate(-Math.PI / 3.2); // Original wing rotation + 30 degrees clockwise body rotation
     this.ctx.scale(1, -1); // Flip vertically
 
-    this.ctx.strokeStyle = "#333";
+    this.ctx.strokeStyle = "#000";
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.arc(0, -3, 12, 1.9, 4.5); // Wing arc at origin
@@ -2680,7 +2693,11 @@ class DuckRaceGame {
       nameTagWidth,
       18
     );
-    this.ctx.fillStyle = "#fff";
+
+    this.ctx.fillStyle =
+      this.isRankedMode() && duck.id === window.rankedRacerId
+        ? "#FFD700"
+        : "#FFFFFF";
     this.ctx.font = "bold 12px Arial";
     this.ctx.textAlign = "center";
     this.ctx.fillText(duck.name, screenX + 10, screenY + 32);
@@ -3257,7 +3274,7 @@ class DuckRaceGame {
     window.localStorage.setItem("okey", okey);
     window.okey = okey;
 
-    const generateProfileUrl = `https://waddle-db.ghervis.workers.dev/api/v1/generate-profile?okey=${window.okey}`;
+    const generateProfileUrl = `https://waddle-waddle.vercel.app/api/v1/generate-profile?okey=${window.okey}`;
     const corsProxyGenerateProfileUrl = `https://corsproxy.io/?${encodeURIComponent(
       generateProfileUrl
     )}`;
@@ -3280,7 +3297,7 @@ class DuckRaceGame {
   }
 
   async fetchOnlineLeaderboard() {
-    const leaderboardUrl = `https://waddle-db.ghervis.workers.dev/api/v1/leaderboard?okey=${window.okey}&wrc=${window.rankedRacerId}`;
+    const leaderboardUrl = `https://waddle-waddle.vercel.app/api/v1/leaderboard?okey=${window.okey}&wrc=${window.rankedRacerId}`;
     const corsProxyLeaderboardUrl = `https://corsproxy.io/?${encodeURIComponent(
       leaderboardUrl
     )}`;
@@ -3288,14 +3305,14 @@ class DuckRaceGame {
       .then((response) => response.json())
       .then((data) => {
         window.leaderboard = data.leaderboard || [];
-        this.updateGlobalLeaderboard();
+        this.updateOnlineLeaderboard();
       })
       .catch((error) => {
         console.error("Error racer id:", error);
       });
   }
 
-  updateGlobalLeaderboard() {
+  updateOnlineLeaderboard() {
     const leaderboardSection = document.getElementById("leaderboardSection");
     const globalLeaderboard = document.getElementById("globalLeaderboard");
 
@@ -3338,8 +3355,19 @@ class DuckRaceGame {
         isUserEntry ? " user-entry" : ""
       }`;
 
+      const profilePictureStyle = entry.profilePicture
+        ? `background-image: url('${entry.profilePicture}'); background-size: cover; background-position: center;`
+        : `background-color: #666; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;`;
+
+      const profilePictureInitial = entry.profilePicture
+        ? ""
+        : entry.name.charAt(0).toUpperCase();
+
       entryElement.innerHTML = `
         <span class="rank">#${rank}</span>
+        <div class="online-leaderboard-profile-picture" style="${profilePictureStyle}">
+          ${profilePictureInitial}
+        </div>
         <span class="name">${entry.name}</span>
         <span class="mmr">${entry.mmr || 0}</span>
       `;
