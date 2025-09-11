@@ -45,6 +45,8 @@ class DuckRaceGame {
     // Load settings from localStorage
     this.loadSettings();
 
+    this.onlineRaceData = null;
+
     // Skills system
     this.skills = {
       boost: { name: "Boost", description: "+10% speed for 3s", emoji: "🚀" },
@@ -1928,7 +1930,7 @@ class DuckRaceGame {
 
     this.toggleStartBtn(false);
 
-    let onlineRaceData = null;
+    this.onlineRaceData = null;
 
     if (this.isRankedMode()) {
       // Ranked mode: Check if ranked racer data is available
@@ -1941,18 +1943,19 @@ class DuckRaceGame {
       try {
         // Step 1: Use createOnlineRankedRace to get race data
         this.log("🌐 Creating online ranked race...");
-        onlineRaceData = await this.createOnlineRankedRace();
+        this.onlineRaceData = await this.createOnlineRankedRace();
 
-        if (!onlineRaceData || !onlineRaceData.standings) {
+        if (!this.onlineRaceData || !this.onlineRaceData.standings) {
           throw new Error("Invalid response from online ranked race API");
         }
 
         // Step 2: Populate racers from the standings response field
         this.log(
-          `🏆 Loading ${onlineRaceData.standings.length} ranked racers...`
+          `🏆 Loading ${this.onlineRaceData.standings.length} ranked racers...`
         );
-        const initSuccess =
-          this.initializeRankedDucksFromResponse(onlineRaceData);
+        const initSuccess = this.initializeRankedDucksFromResponse(
+          this.onlineRaceData
+        );
 
         if (!initSuccess) {
           throw new Error("Failed to initialize racers from online race data");
@@ -1978,12 +1981,12 @@ class DuckRaceGame {
     this.clearLog();
 
     // For ranked mode with online race data, use the simulation from the API response
-    if (this.isRankedMode() && onlineRaceData) {
+    if (this.isRankedMode() && this.onlineRaceData) {
       // Step 3: Use the simulation from the online race response
       this.log("🎮 Using simulation from online ranked race...");
 
       // Apply the online simulation results directly
-      this.applySimulationResults(onlineRaceData);
+      this.applySimulationResults(this.onlineRaceData);
 
       this.log("✅ Online ranked race simulation loaded successfully!");
     } else {
@@ -2836,13 +2839,23 @@ class DuckRaceGame {
         "winner"
       );
 
+      console.log("this", this);
+
       // Log simulation statistics
       this.log("📊 Final Standings (Simulated):");
-      this.simulationStandings.forEach((standing, index) => {
+      this.simulationStandings.forEach((standing) => {
+        let mmrChangeString = "";
+        if (this.onlineRaceData) {
+          const mmrEntry = this.onlineRaceData.mmrChanges.find(
+            (m) => m.id === standing.id
+          );
+          mmrChangeString = ` (MMR: ${mmrEntry.oldValue} → ${mmrEntry.newValue})`;
+        }
+
         this.log(
-          `${index + 1}. ${standing.name} - ${(
+          `${standing.position}. ${standing.name} - ${(
             standing.finishTime / 1000
-          ).toFixed(2)}s`
+          ).toFixed(2)}s${mmrChangeString}`
         );
       });
     }
