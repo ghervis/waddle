@@ -230,6 +230,14 @@ body {
   display: none;
 }
 
+.sidebar.collapsed .leaderboard-list {
+  display: none;
+}
+
+.sidebar.collapsed .leaderboard-list {
+  display: none;
+}
+
 .sidebar.collapsed .log {
   display: none;
 }
@@ -705,6 +713,61 @@ canvas {
   padding: 10px;
   margin-top: 15px;
   border: 1px solid #ddd;
+}
+
+.leaderboard-list {
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 15px;
+  border: 1px solid #ddd;
+}
+
+.global-leaderboard {
+  margin-top: 10px;
+}
+
+.leaderboard-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin: 3px 0;
+  background: linear-gradient(to right, #f8f9fa, #e9ecef);
+  border-radius: 5px;
+  border-left: 3px solid #007bff;
+  font-size: 12px;
+  color: #333;
+}
+
+.leaderboard-entry.user-entry {
+  border-left-color: #ffd700;
+  background: linear-gradient(to right, #fff9c4, #f4e79a);
+  font-weight: bold;
+}
+
+.leaderboard-entry .rank {
+  font-weight: bold;
+  width: 25px;
+  color: #666;
+}
+
+.leaderboard-entry .name {
+  flex: 1;
+  margin-left: 8px;
+  color: #333;
+}
+
+.leaderboard-entry .mmr {
+  font-weight: bold;
+  color: #007bff;
+}
+
+.leaderboard-divider {
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #ddd, transparent);
+  margin: 8px 0;
 }
 
 .skill-item {

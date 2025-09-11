@@ -82,7 +82,7 @@
       <div class="sidebar-content">
         <div id="leaderboard" class="leaderboard"></div>
 
-        <details class="skill-list">
+        <details class="skill-list" id="skillsSection">
           <summary>
             <h3 style="display: inline">Skills</h3>
           </summary>
@@ -110,6 +110,17 @@
 
         <h3 class="race-log-header">Race Log</h3>
         <div id="log" class="log"></div>
+
+        <details
+          class="leaderboard-list"
+          id="leaderboardSection"
+          style="display: none"
+        >
+          <summary>
+            <h3 style="display: inline">🏆 Global Leaderboard</h3>
+          </summary>
+          <div id="globalLeaderboard" class="global-leaderboard"></div>
+        </details>
 
         <!-- Settings Button -->
         <!-- prettier-ignore -->
@@ -208,8 +219,10 @@
 
         if ("ranked" === raceMode) {
           await window.game.generateRankedRacerId();
+          await window.game.fetchOnlineLeaderboard();
         }
         updateStartButtonColor();
+        updateSectionVisibility();
 
         // Update the racers display immediately when mode changes
         if (window.game) {
@@ -217,6 +230,48 @@
           window.game.updateRacersList();
         }
       });
+
+      // Handle section visibility and collapsing
+      function updateSectionVisibility() {
+        const leaderboardSection =
+          document.getElementById("leaderboardSection");
+        const skillsSection = document.getElementById("skillsSection");
+
+        if (raceModeToggle.checked) {
+          // Ranked mode: show leaderboard
+          leaderboardSection.style.display = "block";
+          if (window.game) {
+            window.game.updateGlobalLeaderboard();
+          }
+        } else {
+          // Casual mode: hide leaderboard
+          leaderboardSection.style.display = "none";
+        }
+      }
+
+      // Add event listeners for section toggling
+      document.addEventListener("DOMContentLoaded", function () {
+        const leaderboardSection =
+          document.getElementById("leaderboardSection");
+        const skillsSection = document.getElementById("skillsSection");
+
+        if (leaderboardSection && skillsSection) {
+          leaderboardSection.addEventListener("toggle", function () {
+            if (this.open) {
+              skillsSection.removeAttribute("open");
+            }
+          });
+
+          skillsSection.addEventListener("toggle", function () {
+            if (this.open) {
+              leaderboardSection.removeAttribute("open");
+            }
+          });
+        }
+      });
+
+      // Initial section visibility update
+      updateSectionVisibility();
 
       function updateStartButtonColor() {
         if (raceModeToggle.checked) {

@@ -34,7 +34,8 @@ class DuckRaceGame {
     this.gameLoopRunning = false; // Prevent double execution
 
     // Initialize duck names pool
-    this.defaultRacerNames = this.loadDefaultRacerNames();
+    this.customRacerNames = this.loadCustomRacerNames();
+    this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
 
     this.generateRankedRacerId();
 
@@ -46,21 +47,28 @@ class DuckRaceGame {
 
     // Skills system
     this.skills = {
-      boost: { name: "Boost", description: "+10% speed for 3s" },
-      bomb: { name: "Bomb", description: "Stun leader for 2s" },
-      leech: {
+      boost: { name: "Boost", description: "+10% speed for 3s", emoji: "🚀" },
+      bomb: { name: "Bomb", description: "Stun leader for 2s", emoji: "💣" },
+      splash: {
         name: "Splash 🌊",
         description: "-5% speed to all, +5% per affected to caster for 2s",
+        emoji: "🌊",
       },
-      immune: { name: "Immune", description: "Immune to skills for 2s" },
+      immune: {
+        name: "Immune",
+        description: "Immune to skills for 2s",
+        emoji: "🛡️",
+      },
       lightning: {
         name: "Lightning",
         description: "Stun others for 1s (last place only)",
+        emoji: "⚡",
       },
       magnet: {
         name: "Magnet",
         description:
           "Speed boost based on distance from leader (last place only)",
+        emoji: "🧲",
       },
     };
 
@@ -642,7 +650,7 @@ class DuckRaceGame {
       // Skill event (has skill field)
       const duck = this.getDuckById(event.id); // Get duck by ID instead of name
       if (duck) {
-        this.log(`⚡ ${duck.name} used ${event.s}!`); // Compressed: event.skill -> event.s
+        this.log(`${this.skills[event.s].emoji} ${duck.name} used ${event.s}!`); // Compressed: event.skill -> event.s
 
         // Add visual floating effect for skill use (display for 1 second)
         switch (
@@ -767,20 +775,42 @@ class DuckRaceGame {
     }
   }
 
-  loadDefaultRacerNames() {
-    const saved = localStorage.getItem("defaultRacerNames");
+  loadCustomRacerNames() {
+    const saved = localStorage.getItem("customRacerNames");
     if (saved) {
       return JSON.parse(saved);
     }
 
-    const defaultNames = [];
+    const customRacerNames = [];
     for (let i = 0; i < 5; i++) {
       const randomIndex = Math.floor(Math.random() * window.duckNames.length);
-      defaultNames.push(window.duckNames[randomIndex]);
+      customRacerNames.push(window.duckNames[randomIndex]);
     }
 
-    localStorage.setItem("defaultRacerNames", JSON.stringify(defaultNames));
-    return defaultNames;
+    localStorage.setItem("customRacerNames", JSON.stringify(customRacerNames));
+    return customRacerNames;
+  }
+
+  loadCustomRacerProfilePictures() {
+    const saved = localStorage.getItem("customRacerProfilePictures");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+
+    // Initialize with null values for 5 custom racers
+    const customRacerProfilePictures = [null, null, null, null, null];
+    localStorage.setItem(
+      "customRacerProfilePictures",
+      JSON.stringify(customRacerProfilePictures)
+    );
+    return customRacerProfilePictures;
+  }
+
+  saveDefaultRacerProfilePictures() {
+    localStorage.setItem(
+      "customRacerProfilePictures",
+      JSON.stringify(this.customRacerProfilePictures)
+    );
   }
 
   getRandomDuckName() {
@@ -837,14 +867,12 @@ class DuckRaceGame {
   }
 
   updateRacersList() {
-    console.log("updateRacersList called");
     if (this.isRankedMode()) {
       // Ranked mode: Use only ranked racer data
       this.duckNames = [window.rankedRacerName || "Ranked Duck"];
       this.duckColors = ["#FFD700"]; // Gold color for ranked racer
       this.duckProfilePictures = [window.rankedRacerProfilePicture || null];
 
-      console.log("updateRacersList: Ranked mode active");
       this.initializeRankedDuck();
       this.updateLeaderboard();
       this.draw();
@@ -857,36 +885,36 @@ class DuckRaceGame {
     this.duckProfilePictures = [];
 
     // Always start with the 5 default racers in casual mode
-    const defaultRacers = [
+    const customRacers = [
       {
-        name: this.defaultRacerNames[0] || "Duck1",
+        name: this.customRacerNames[0] || "Duck1",
         color: "#FFD700",
-        profilePicture: null,
+        profilePicture: this.customRacerProfilePictures[0] || null,
       },
       {
-        name: this.defaultRacerNames[1] || "Duck2",
+        name: this.customRacerNames[1] || "Duck2",
         color: "#FF6347",
-        profilePicture: null,
+        profilePicture: this.customRacerProfilePictures[1] || null,
       },
       {
-        name: this.defaultRacerNames[2] || "Duck3",
+        name: this.customRacerNames[2] || "Duck3",
         color: "#32CD32",
-        profilePicture: null,
+        profilePicture: this.customRacerProfilePictures[2] || null,
       },
       {
-        name: this.defaultRacerNames[3] || "Duck4",
+        name: this.customRacerNames[3] || "Duck4",
         color: "#1E90FF",
-        profilePicture: null,
+        profilePicture: this.customRacerProfilePictures[3] || null,
       },
       {
-        name: this.defaultRacerNames[4] || "Duck5",
+        name: this.customRacerNames[4] || "Duck5",
         color: "#DA70D6",
-        profilePicture: null,
+        profilePicture: this.customRacerProfilePictures[4] || null,
       },
     ];
 
     // Add default racers
-    defaultRacers.forEach((racer) => {
+    customRacers.forEach((racer) => {
       this.duckNames.push(racer.name);
       this.duckColors.push(racer.color);
       this.duckProfilePictures.push(racer.profilePicture);
@@ -1379,6 +1407,8 @@ class DuckRaceGame {
     // Clear all localStorage data
     localStorage.removeItem("duckRaceCustomRacers");
     localStorage.removeItem("duckRaceSettings");
+    localStorage.removeItem("customRacerNames");
+    localStorage.removeItem("customRacerProfilePictures");
 
     // Reset game state
     this.customRacers = [];
@@ -1386,6 +1416,8 @@ class DuckRaceGame {
     this.duckColors = [];
     this.duckProfilePictures = [];
     this.settings = {};
+    this.customRacerNames = this.loadCustomRacerNames();
+    this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
 
     // Close dialog
     const dialog = document.querySelector(".settings-dialog");
@@ -1408,11 +1440,33 @@ class DuckRaceGame {
     // Convert id to string for comparison
     const racerId = String(id);
 
-    // First try to find in customRacers (casual mode)
+    // First try to find in customRacers (casual mode custom racers)
     let racer = this.customRacers.find((r) => String(r.id) === racerId);
     let isRankedModeRacer = false;
+    let isCustomRacer = false;
 
-    // If not found in customRacers, try to find in ducks array (ranked mode)
+    // If not found in customRacers, check if it's a default racer in casual mode
+    if (!racer && !this.isRankedMode()) {
+      // In casual mode, check if this is a default racer (ID 0-4)
+      const duckIndex = parseInt(racerId);
+      if (
+        duckIndex >= 0 &&
+        duckIndex < 5 &&
+        this.ducks &&
+        this.ducks[duckIndex]
+      ) {
+        const duck = this.ducks[duckIndex];
+        racer = {
+          id: duck.id,
+          name: duck.name,
+          color: duck.color,
+          profilePicture: duck.profilePicture,
+        };
+        isCustomRacer = true;
+      }
+    }
+
+    // If still not found, try to find in ducks array (ranked mode)
     if (!racer && this.ducks) {
       const duck = this.ducks.find((d) => String(d.id) === racerId);
       if (duck) {
@@ -1444,53 +1498,152 @@ class DuckRaceGame {
         racer.color
       }, rgba(255,255,255,0.9)); position: relative;">
         <button class="dialog-close-btn" onclick="this.closest('.racer-dialog').remove()">×</button>
-        <h3>Edit Racer${isRankedModeRacer ? " (Ranked)" : ""}</h3>
-        <input type="text" id="editDialogRacerName" placeholder="Duck name" minlength="2" maxlength="32" value="${
-          racer.name
-        }" />
-        
-        <div class="file-upload-area" onclick="document.getElementById('editDialogImageFile').click()" ondrop="window.game.handleImageDrop(event, 'edit')" ondragover="window.game.handleDragOver(event)" ondragleave="window.game.handleDragLeave(event)">
-          <div>📷 Click or drag to upload profile picture</div>
-          <div style="font-size: 10px; color: #666; margin-top: 5px;">Will be resized to 64x64 pixels</div>
-          <div id="editDialogImagePreview">${
-            racer.profilePicture
-              ? `<img src="${racer.profilePicture}" class="preview-image" alt="Current" />`
-              : ""
-          }</div>
-        </div>
-        <input type="file" id="editDialogImageFile" accept="image/*" style="display: none;" onchange="window.game.handleImageUpload(event, 'edit')" />
-        
-        <button onclick="window.game.randomizeRacerColor('${id}')" style="margin: 10px 0; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Randomize Color 🌈</button>
-        <div class="dialog-buttons">
-          <button onclick="this.closest('.racer-dialog').remove()">Cancel</button>
-          <button onclick="window.game.updateRacerFromDialog('${id}')">Update Duck</button>
-        </div>
+        <h3>Edit Racer${
+          isRankedModeRacer ? " (Ranked)" : isCustomRacer ? " (Default)" : ""
+        }</h3>
+        <form id="editRacerForm">
+          <label for="editDialogRacerName" style="display: block; margin-bottom: 5px; font-weight: bold;">Name (2-16 alphanumeric characters) *</label>
+          <input type="text" id="editDialogRacerName" name="racerName" placeholder="Duck name" pattern="[A-Za-z0-9]{2,16}" minlength="2" maxlength="16" value="${
+            racer.name
+          }" required />
+          <div id="nameError" style="color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;">Name must be 2-16 alphanumeric characters only</div>
+          
+          <div class="file-upload-area" onclick="document.getElementById('editDialogImageFile').click()" ondrop="window.game.handleImageDrop(event, 'edit')" ondragover="window.game.handleDragOver(event)" ondragleave="window.game.handleDragLeave(event)">
+            <div>📷 Click or drag to upload profile picture</div>
+            <div style="font-size: 10px; color: #666; margin-top: 5px;">Will be resized to 64x64 pixels</div>
+            <div id="editDialogImagePreview">${
+              racer.profilePicture
+                ? `<img src="${racer.profilePicture}" class="preview-image" alt="Current" />`
+                : ""
+            }</div>
+          </div>
+          <input type="file" id="editDialogImageFile" accept="image/*" style="display: none;" onchange="window.game.handleImageUpload(event, 'edit')" />
+          
+          <button type="button" onclick="window.game.randomizeRacerColor('${id}')" style="margin: 10px 0; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Randomize Color 🌈</button>
+          <div class="dialog-buttons">
+            <button type="button" onclick="this.closest('.racer-dialog').remove()">Cancel</button>
+            <button type="submit">Update Duck</button>
+          </div>
+        </form>
       </div>
     `;
     dialog.uploadedImage = racer.profilePicture; // Start with existing image
     dialog.isRankedModeRacer = isRankedModeRacer; // Store for later use
+    dialog.isCustomRacer = isCustomRacer; // Store for later use
     document.body.appendChild(dialog);
+
+    // Add form validation and submission handler
+    const form = document.getElementById("editRacerForm");
+    const nameInput = document.getElementById("editDialogRacerName");
+    const nameError = document.getElementById("nameError");
+
+    // Real-time validation
+    nameInput.addEventListener("input", () => {
+      const value = nameInput.value;
+      const isValid = /^[A-Za-z0-9]{2,16}$/.test(value);
+
+      if (value && !isValid) {
+        nameError.style.display = "block";
+        nameInput.style.borderColor = "#e74c3c";
+      } else {
+        nameError.style.display = "none";
+        nameInput.style.borderColor = "";
+      }
+    });
+
+    // Form submission handler
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        nameError.textContent = "Name is required";
+        nameError.style.display = "block";
+        nameInput.style.borderColor = "#e74c3c";
+        nameInput.focus();
+        return;
+      }
+
+      if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
+        nameError.textContent =
+          "Name must be 2-16 alphanumeric characters only";
+        nameError.style.display = "block";
+        nameInput.style.borderColor = "#e74c3c";
+        nameInput.focus();
+        return;
+      }
+
+      this.updateRacerFromDialog(id);
+    });
+
     document.getElementById("editDialogRacerName").focus();
   }
 
-  updateRacerFromDialog(id) {
-    const name = document.getElementById("editDialogRacerName").value;
+  async updateRacerFromDialog(id) {
+    const name = document.getElementById("editDialogRacerName").value.trim();
     const dialog = document.querySelector(".racer-dialog");
     const imageData = dialog ? dialog.uploadedImage : null;
     const isRankedModeRacer = dialog ? dialog.isRankedModeRacer : false;
+    const isCustomRacer = dialog ? dialog.isCustomRacer : false;
 
-    if (!name.trim()) {
+    // Validate name
+    if (!name) {
+      const nameError = document.getElementById("nameError");
+      const nameInput = document.getElementById("editDialogRacerName");
+      nameError.textContent = "Name is required";
+      nameError.style.display = "block";
+      nameInput.style.borderColor = "#e74c3c";
+      nameInput.focus();
       return;
+    }
+
+    if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
+      const nameError = document.getElementById("nameError");
+      const nameInput = document.getElementById("editDialogRacerName");
+      nameError.textContent = "Name must be 2-16 alphanumeric characters only";
+      nameError.style.display = "block";
+      nameInput.style.borderColor = "#e74c3c";
+      nameInput.focus();
+      return;
+    }
+
+    if (this.isRankedMode() && id === window.rankedRacerId) {
+      const updateRacerUrl = `https://waddle-db.ghervis.workers.dev/api/v1/update-racer?okey=${window.okey}`;
+      const corsProxyUpdateRacerUrl = `https://corsproxy.io/?${encodeURIComponent(
+        updateRacerUrl
+      )}`;
+
+      try {
+        await fetch(corsProxyUpdateRacerUrl, {
+          method: "PUT", // Specify the HTTP method as POST
+          headers: {
+            "Content-Type": "application/json", // Inform the server about the data format
+          },
+          body: JSON.stringify({
+            id: window.rankedRacerId,
+            name: name,
+            profilePicture: imageData,
+            okey: window.okey,
+          }),
+        });
+      } catch (reason) {
+        console.error(reason);
+        return;
+      }
+
+      window.localStorage.setItem("rankedRacerName", name);
+      window.localStorage.setItem("rankedRacerProfilePicture", imageData);
+      this.setWindowRacerData();
     }
 
     // Convert id to string for comparison
     const racerId = String(id);
 
-    if (isRankedModeRacer) {
-      // Handle ranked mode racer (update ducks array and duck data arrays)
-      const duckIndex = this.ducks.findIndex((d) => String(d.id) === racerId);
+    if (isCustomRacer) {
+      // Handle default racer (update ducks array and duck data arrays)
+      const duckIndex = parseInt(racerId);
 
-      if (-1 === duckIndex) {
+      if (duckIndex < 0 || duckIndex >= 5 || !this.ducks[duckIndex]) {
         document.querySelector(".racer-dialog").remove();
         return;
       }
@@ -1515,11 +1668,55 @@ class DuckRaceGame {
       this.duckNames[duckIndex] = uniqueName;
       this.duckProfilePictures[duckIndex] = imageData;
 
+      // Update default racer names and profile pictures in localStorage to persist changes
+      if (this.customRacerNames && this.customRacerNames[duckIndex]) {
+        this.customRacerNames[duckIndex] = uniqueName;
+        localStorage.setItem(
+          "customRacerNames",
+          JSON.stringify(this.customRacerNames)
+        );
+      }
+
+      if (this.customRacerProfilePictures) {
+        this.customRacerProfilePictures[duckIndex] = imageData;
+        this.saveDefaultRacerProfilePictures();
+      }
+
       // Update the leaderboard to reflect changes
       this.updateLeaderboard();
       this.draw();
 
-      console.log("Updated ranked mode racer:", uniqueName);
+      console.log("Updated custom racer:", uniqueName);
+
+      document.querySelector(".racer-dialog").remove();
+
+      return;
+    }
+
+    if (isRankedModeRacer) {
+      // Handle ranked mode racer (update ducks array and duck data arrays)
+      const duckIndex = this.ducks.findIndex((d) => String(d.id) === racerId);
+
+      console.log("duckIOndex", duckIndex);
+
+      if (-1 === duckIndex) {
+        document.querySelector(".racer-dialog").remove();
+        return;
+      }
+
+      // Update the duck
+      this.ducks[duckIndex].name = name;
+      this.ducks[duckIndex].profilePicture = imageData;
+
+      // Update the duck data arrays for consistency
+      this.duckNames[duckIndex] = name;
+      this.duckProfilePictures[duckIndex] = imageData;
+
+      // Update the leaderboard to reflect changes
+      this.updateLeaderboard();
+      this.draw();
+
+      console.log("Updated ranked mode racer:", name);
 
       document.querySelector(".racer-dialog").remove();
 
@@ -1562,13 +1759,13 @@ class DuckRaceGame {
     // Convert id to string for comparison
     const racerId = String(id);
 
-    // Check if this is a ranked mode racer
+    // Check if this is a ranked mode racer or default racer
     const duckIndex = this.ducks
       ? this.ducks.findIndex((d) => String(d.id) === racerId)
       : -1;
 
     if (duckIndex !== -1) {
-      // Handle ranked mode racer
+      // Handle ranked mode racer OR default racer (both exist in ducks array)
       const newColor = this.generateUniqueColor();
 
       // Update the duck
@@ -1590,12 +1787,12 @@ class DuckRaceGame {
       this.draw();
 
       console.log(
-        "Randomized color for ranked mode racer:",
+        "Randomized color for racer:",
         this.ducks[duckIndex].name,
         newColor
       );
     } else {
-      // Handle custom racer (original logic)
+      // Handle custom racer (exists in customRacers array)
       const racerIndex = this.customRacers.findIndex(
         (r) => String(r.id) === racerId
       );
@@ -1620,13 +1817,13 @@ class DuckRaceGame {
   }
 
   async createOnlineRankedRace() {
-    const upsertRacerUrl = `https://waddle-db.ghervis.workers.dev/api/v1/ranked-race?okey=${window.okey}&wrc=${window.rankedRacerId}`;
-    const corsProxyUpsertRacerUrl = `https://corsproxy.io/?${encodeURIComponent(
-      upsertRacerUrl
+    const rankedRaceUrl = `https://waddle-db.ghervis.workers.dev/api/v1/ranked-race?okey=${window.okey}&wrc=${window.rankedRacerId}`;
+    const corsProxyRankedRaceUrl = `https://corsproxy.io/?${encodeURIComponent(
+      rankedRaceUrl
     )}`;
 
     try {
-      const response = await fetch(corsProxyUpsertRacerUrl);
+      const response = await fetch(corsProxyRankedRaceUrl);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -2658,6 +2855,7 @@ class DuckRaceGame {
     this.publishToDiscord(finalStandings);
 
     window.updateRaceModeToggleState(false);
+    this.fetchOnlineLeaderboard();
   }
 
   publishToDiscord(standings) {
@@ -2767,13 +2965,6 @@ class DuckRaceGame {
     }
 
     // Show all racers with edit/delete buttons when not racing
-
-    console.log("duckNames", [...this.duckNames]);
-    console.log("ducks", [...this.ducks]);
-
-    if (0 === this.ducks.length) {
-    }
-
     this.ducks.forEach((duck, index) => {
       const name = duck.name || this.duckNames[index];
       // this.duckNames.forEach((name, index) => {
@@ -2782,7 +2973,7 @@ class DuckRaceGame {
 
       // Find the custom racer that matches this name and position
       let racerId = duck.id || index;
-      let profilePicture = null;
+      let profilePicture = duck.profilePicture || null;
       let isOwnedByUser = this.isRankedMode()
         ? duck.id === window.rankedRacerId
         : true; // Default to true for non-ranked mode
@@ -3050,14 +3241,82 @@ class DuckRaceGame {
           "rankedRacerProfilePicture",
           data.profilePicture || ""
         );
-        window.localStorage.setItem("rankedRacerMmr", data.mmr || 1000);
+        window.localStorage.setItem("rankedRacerMmr", data.mmr || 0);
         this.setWindowRacerData();
         this.toggleStartBtn(true);
       })
-
       .catch((error) => {
-        console.error("Error fetching players:", error);
+        console.error("Error racer id:", error);
       });
+  }
+
+  async fetchOnlineLeaderboard() {
+    const leaderboardUrl = `https://waddle-db.ghervis.workers.dev/api/v1/leaderboard?okey=${window.okey}&wrc=${window.rankedRacerId}`;
+    const corsProxyLeaderboardUrl = `https://corsproxy.io/?${encodeURIComponent(
+      leaderboardUrl
+    )}`;
+    fetch(corsProxyLeaderboardUrl)
+      .then((response) => response.json())
+      .then((data) => {
+        window.leaderboard = data.leaderboard || [];
+        this.updateGlobalLeaderboard();
+      })
+      .catch((error) => {
+        console.error("Error racer id:", error);
+      });
+  }
+
+  updateGlobalLeaderboard() {
+    const leaderboardSection = document.getElementById("leaderboardSection");
+    const globalLeaderboard = document.getElementById("globalLeaderboard");
+
+    if (!leaderboardSection || !globalLeaderboard) {
+      return; // Elements not ready yet
+    }
+
+    if (!this.isRankedMode()) {
+      leaderboardSection.style.display = "none";
+      return;
+    }
+
+    leaderboardSection.style.display = "block";
+
+    if (
+      !window.leaderboard ||
+      !Array.isArray(window.leaderboard) ||
+      window.leaderboard.length === 0
+    ) {
+      globalLeaderboard.innerHTML =
+        '<div class="leaderboard-entry">Loading leaderboard...</div>';
+      return;
+    }
+
+    globalLeaderboard.innerHTML = "";
+
+    window.leaderboard.forEach((entry, index) => {
+      const rank = index + 1;
+      const isUserEntry = entry.id === window.rankedRacerId;
+
+      // Add divider before user entry if it's the 11th entry
+      if (rank === 11 && isUserEntry) {
+        const divider = document.createElement("hr");
+        divider.className = "leaderboard-divider";
+        globalLeaderboard.appendChild(divider);
+      }
+
+      const entryElement = document.createElement("div");
+      entryElement.className = `leaderboard-entry${
+        isUserEntry ? " user-entry" : ""
+      }`;
+
+      entryElement.innerHTML = `
+        <span class="rank">#${rank}</span>
+        <span class="name">${entry.name}</span>
+        <span class="mmr">${entry.mmr || 0}</span>
+      `;
+
+      globalLeaderboard.appendChild(entryElement);
+    });
   }
 
   setWindowRacerData() {
@@ -3101,4 +3360,9 @@ class DuckRaceGame {
 // Initialize the game when page loads
 document.addEventListener("DOMContentLoaded", () => {
   window.game = new DuckRaceGame();
+
+  // If in ranked mode, fetch leaderboard data
+  if (window.game.isRankedMode()) {
+    window.game.fetchOnlineLeaderboard();
+  }
 });
