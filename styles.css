@@ -641,6 +641,15 @@ canvas {
   background: rgba(76, 175, 80, 0.1);
 }
 
+.settings-section.webhook {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.settings-section.webhook h4 {
+  color: #8b5cf6;
+}
+
 .settings-section.danger {
   border-color: #e74c3c;
   background: rgba(231, 76, 60, 0.1);
@@ -1030,6 +1039,30 @@ canvas {
   max-width: 350px;
 }
 
+.settings-scrollable {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px; /* For scrollbar space */
+}
+
+.settings-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-scrollable::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.settings-scrollable::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.settings-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 details:not([open]) {
   cursor: pointer;
   user-select: none;
@@ -1038,6 +1071,10 @@ details:not([open]) {
 input[type="color"].color-picker {
   padding: 2px 5px;
   height: 32px;
+}
+
+#discordWebhookUrl {
+  margin-top: 0;
 }
 
 /* Mobile Responsive Styles */
@@ -1258,8 +1295,8 @@ input[type="color"].color-picker {
   /* Mobile settings dialog */
   .dialog-content {
     min-width: unset;
-    width: 90vw;
-    max-width: 350px;
+    width: 80vw;
+    max-width: none;
     margin: 0 auto;
     max-height: 80vh;
     overflow-y: auto;

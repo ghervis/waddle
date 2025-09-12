@@ -167,43 +167,48 @@
         </button>
         <h3>⚙️ Settings</h3>
 
-        <label for="discordWebhookUrl">Discord Webhook URL:</label>
-        <input
-          type="url"
-          id="discordWebhookUrl"
-          placeholder="https://discord.com/api/webhooks/..."
-          value=""
-          onchange="window.game && window.game.autoSaveSettings()"
-        />
+        <div class="settings-scrollable">
+          <div class="settings-section webhook">
+            <h4>🔗 Discord Webhook</h4>
+            <p>Send race results to your Discord channel</p>
+            <input
+              type="url"
+              id="discordWebhookUrl"
+              placeholder="https://discord.com/api/webhooks/..."
+              value=""
+              onchange="window.game && window.game.autoSaveSettings()"
+            />
+          </div>
 
-        <div class="settings-section export">
-          <h4>📤 Export Profile</h4>
-          <p>Export your profile to be accessed on other device(s)</p>
-          <button
-            id="exportProfileBtn"
-            class="export-profile-btn"
-            onclick="window.game && window.game.copyProfileLink()"
-          >
-            📋 Click to copy link
-          </button>
-          <div id="copyStatus" class="copy-status"></div>
-        </div>
+          <div class="settings-section export">
+            <h4>📤 Export Profile</h4>
+            <p>Export your profile to be accessed on other device(s)</p>
+            <button
+              id="exportProfileBtn"
+              class="export-profile-btn"
+              onclick="window.game && window.game.copyProfileLink()"
+            >
+              📋 Click to copy link
+            </button>
+            <div id="copyStatus" class="copy-status"></div>
+          </div>
 
-        <div class="settings-section danger">
-          <h4>⚠️ Danger Zone</h4>
-          <button
-            id="resetDataBtn"
-            class="reset-data-btn"
-            onmousedown="window.game && window.game.startResetHold()"
-            onmouseup="window.game && window.game.stopResetHold()"
-            onmouseleave="window.game && window.game.stopResetHold()"
-            ontouchstart="window.game && window.game.startResetHold(event)"
-            ontouchend="window.game && window.game.stopResetHold()"
-            ontouchcancel="window.game && window.game.stopResetHold()"
-          >
-            <span id="resetBtnText">🗑️ Hold to Reset All Data (4s)</span>
-            <div id="resetProgress" class="reset-progress"></div>
-          </button>
+          <div class="settings-section danger">
+            <h4>⚠️ Danger Zone</h4>
+            <button
+              id="resetDataBtn"
+              class="reset-data-btn"
+              onmousedown="window.game && window.game.startResetHold()"
+              onmouseup="window.game && window.game.stopResetHold()"
+              onmouseleave="window.game && window.game.stopResetHold()"
+              ontouchstart="window.game && window.game.startResetHold(event)"
+              ontouchend="window.game && window.game.stopResetHold()"
+              ontouchcancel="window.game && window.game.stopResetHold()"
+            >
+              <span id="resetBtnText">🗑️ Hold to Reset All Data (4s)</span>
+              <div id="resetProgress" class="reset-progress"></div>
+            </button>
+          </div>
         </div>
 
         <div class="dialog-buttons">
