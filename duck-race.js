@@ -1883,7 +1883,7 @@ class DuckRaceGame {
         this.ducks.push({
           id: racer.id,
           name: racer.name || `Racer ${racer.id}`,
-          color: racer.color || `hsl(${(index * 360) / racerCount}, 70%, 50%)`,
+          color: racer.color || this.generateRandomColor(),
           profilePicture: racer.profilePicture || null,
           x: 50, // Start position
           y: laneY, // Calculated lane positioning
