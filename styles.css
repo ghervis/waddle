@@ -1035,6 +1035,11 @@ details:not([open]) {
   user-select: none;
 }
 
+input[type="color"].color-picker {
+  padding: 2px 5px;
+  height: 32px;
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 1280px) {
   body {

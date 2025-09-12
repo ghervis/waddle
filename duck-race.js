@@ -1196,10 +1196,25 @@ class DuckRaceGame {
     dialog.currentColor = randomColor;
     dialog.uploadedImage = null;
 
+    // Set initial color picker value
+    const colorPicker = document.getElementById("addDialogColorPicker");
+    if (colorPicker) {
+      colorPicker.value = window.rgbToHex(randomColor);
+    }
+
     // Apply dynamic gradient background on the dialog card
     const contentEl = dialog.querySelector(".dialog-content");
-    if (contentEl) {
-      contentEl.style.background = `linear-gradient(to left, ${randomColor}, rgba(255,255,255,0.9))`;
+
+    // Add event listener for color picker if not already added
+    if (colorPicker && !colorPicker.dataset.listenerAdded) {
+      colorPicker.onchange = (e) => {
+        const selectedColor = e.target.value;
+        dialog.currentColor = selectedColor;
+        if (contentEl) {
+          contentEl.style.background = `linear-gradient(to left, ${selectedColor}, rgba(255,255,255,0.9))`;
+        }
+      };
+      colorPicker.dataset.listenerAdded = "true";
     }
 
     // Reset fields
@@ -1229,7 +1244,12 @@ class DuckRaceGame {
   addRacerFromDialog() {
     const name = document.getElementById("addDialogRacerName").value;
     const dialog = document.getElementById("addRacerDialog");
-    const color = dialog ? dialog.currentColor : this.generateUniqueColor();
+    const colorPicker = document.getElementById("addDialogColorPicker");
+    const color = colorPicker
+      ? colorPicker.value
+      : dialog
+      ? dialog.currentColor
+      : this.generateUniqueColor();
     const imageData = dialog ? dialog.uploadedImage : null;
 
     if (name.trim()) {
@@ -1307,18 +1327,6 @@ class DuckRaceGame {
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
-  }
-
-  randomizeAddDialogColor() {
-    const dialog = document.getElementById("addRacerDialog");
-    if (dialog) {
-      const newColor = this.generateUniqueColor();
-      dialog.currentColor = newColor;
-      const dialogContent = dialog.querySelector(".dialog-content");
-      if (dialogContent) {
-        dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
-      }
-    }
   }
 
   openSettingsDialog() {
@@ -1587,6 +1595,24 @@ class DuckRaceGame {
       dialogContentEl.style.background = `linear-gradient(to left, ${racer.color}, rgba(255,255,255,0.9))`;
     }
 
+    // Set initial color picker value
+    const colorPicker = document.getElementById("editDialogColorPicker");
+    if (colorPicker) {
+      colorPicker.value = racer.color;
+    }
+
+    // Add event listener for color picker if not already added
+    if (colorPicker && !colorPicker.dataset.listenerAdded) {
+      colorPicker.onchange = (e) => {
+        const selectedColor = e.target.value;
+        dialog.currentColor = selectedColor;
+        if (dialogContentEl) {
+          dialogContentEl.style.background = `linear-gradient(to left, ${selectedColor}, rgba(255,255,255,0.9))`;
+        }
+      };
+      colorPicker.dataset.listenerAdded = "true";
+    }
+
     // Populate form fields
     const form = document.getElementById("editRacerForm");
     const nameInput = document.getElementById("editDialogRacerName");
@@ -1607,12 +1633,6 @@ class DuckRaceGame {
         racer.profilePicture && racer.profilePicture.trim() !== ""
           ? `<img src="${racer.profilePicture}" class="preview-image" alt="Current" />`
           : "";
-    }
-
-    // Wire Randomize Color button to this racer id
-    const randomizeBtn = document.getElementById("editDialogRandomizeColor");
-    if (randomizeBtn) {
-      randomizeBtn.onclick = () => this.randomizeRacerColor(id);
     }
 
     // Real-time validation (overwrite previous handlers to avoid duplicates)
@@ -1676,6 +1696,12 @@ class DuckRaceGame {
   async updateRacerFromDialog(id) {
     const name = document.getElementById("editDialogRacerName").value.trim();
     const dialog = document.getElementById("editRacerDialog");
+    const colorPicker = document.getElementById("editDialogColorPicker");
+    const color = colorPicker
+      ? colorPicker.value
+      : dialog
+      ? dialog.currentColor
+      : "#FFD700";
     const imageData = dialog ? dialog.uploadedImage : null;
     const isRankedModeRacer = dialog ? dialog.isRankedModeRacer : false;
     const isCustomRacer = dialog ? dialog.isCustomRacer : false;
@@ -1763,9 +1789,11 @@ class DuckRaceGame {
       // Update the duck
       this.ducks[duckIndex].name = uniqueName;
       this.ducks[duckIndex].profilePicture = imageData;
+      this.ducks[duckIndex].color = color;
 
       // Update the duck data arrays for consistency
       this.duckNames[duckIndex] = uniqueName;
+      this.duckColors[duckIndex] = color;
       this.duckProfilePictures[duckIndex] = imageData;
 
       // Update default racer names and profile pictures in localStorage to persist changes
@@ -1816,9 +1844,11 @@ class DuckRaceGame {
       // Update the duck
       this.ducks[duckIndex].name = name;
       this.ducks[duckIndex].profilePicture = imageData;
+      this.ducks[duckIndex].color = color;
 
       // Update the duck data arrays for consistency
       this.duckNames[duckIndex] = name;
+      this.duckColors[duckIndex] = color;
       this.duckProfilePictures[duckIndex] = imageData;
 
       // Update the leaderboard to reflect changes
@@ -1857,6 +1887,7 @@ class DuckRaceGame {
 
       this.customRacers[racerIndex].name = uniqueName;
       this.customRacers[racerIndex].profilePicture = imageData;
+      this.customRacers[racerIndex].color = color;
       this.saveCustomRacers();
       this.updateRacersList();
 
@@ -1864,6 +1895,7 @@ class DuckRaceGame {
       if (this.raceActive && this.ducks[racerIndex]) {
         this.ducks[racerIndex].name = uniqueName;
         this.ducks[racerIndex].profilePicture = imageData;
+        this.ducks[racerIndex].color = color;
       }
     }
 
@@ -1873,67 +1905,6 @@ class DuckRaceGame {
     } else {
       const el = document.querySelector(".racer-dialog");
       if (el) el.remove();
-    }
-  }
-
-  randomizeRacerColor(id) {
-    // Convert id to string for comparison
-    const racerId = String(id);
-
-    // Check if this is a ranked mode racer or default racer
-    const duckIndex = this.ducks
-      ? this.ducks.findIndex((d) => String(d.id) === racerId)
-      : -1;
-
-    if (duckIndex !== -1) {
-      // Handle ranked mode racer OR default racer (both exist in ducks array)
-      const newColor = this.generateUniqueColor();
-
-      // Update the duck
-      this.ducks[duckIndex].color = newColor;
-
-      // Update the duck data arrays for consistency
-      this.duckColors[duckIndex] = newColor;
-
-      // Update the dialog background
-      const dialogContent =
-        document.querySelector("#editRacerDialog .dialog-content") ||
-        document.querySelector(".racer-dialog .dialog-content");
-      if (dialogContent) {
-        dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
-      }
-
-      // Update the leaderboard and canvas to reflect changes
-      this.updateLeaderboard();
-      this.draw();
-
-      console.log(
-        "Randomized color for racer:",
-        this.ducks[duckIndex].name,
-        newColor
-      );
-    } else {
-      // Handle custom racer (exists in customRacers array)
-      const racerIndex = this.customRacers.findIndex(
-        (r) => String(r.id) === racerId
-      );
-      if (racerIndex !== -1) {
-        // Generate a new unique color
-        const newColor = this.generateUniqueColor();
-        this.customRacers[racerIndex].color = newColor;
-
-        // Update the dialog background
-        const dialogContent =
-          document.querySelector("#editRacerDialog .dialog-content") ||
-          document.querySelector(".racer-dialog .dialog-content");
-        if (dialogContent) {
-          dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
-        }
-
-        // Save and update the display
-        this.saveCustomRacers();
-        this.updateRacersList();
-      }
     }
   }
 

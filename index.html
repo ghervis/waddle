@@ -260,9 +260,15 @@
             onchange="window.game && window.game.handleImageUpload(event, 'edit')"
           />
 
-          <button type="button" id="editDialogRandomizeColor">
-            Randomize Color 🌈
-          </button>
+          <label for="editDialogColorPicker" class="color-picker-label"
+            >Select Color 🎨</label
+          >
+          <input
+            type="color"
+            id="editDialogColorPicker"
+            class="color-picker"
+            value="#FFD700"
+          />
           <div class="dialog-buttons">
             <button
               type="button"
@@ -311,13 +317,15 @@
           onchange="window.game && window.game.handleImageUpload(event, 'add')"
         />
 
-        <button
-          type="button"
-          id="addDialogRandomizeColor"
-          onclick="window.game && window.game.randomizeAddDialogColor()"
+        <label for="addDialogColorPicker" class="color-picker-label"
+          >Select Color 🎨</label
         >
-          Randomize Color 🌈
-        </button>
+        <input
+          type="color"
+          id="addDialogColorPicker"
+          class="color-picker"
+          value="#FFD700"
+        />
         <div class="dialog-buttons">
           <button
             type="button"
@@ -334,6 +342,7 @@
         </div>
       </div>
     </dialog>
+    <script src="common-utilities.js"></script>
     <script>
       function toggleSidebar() {
         const sidebar = document.getElementById("sidebar");
