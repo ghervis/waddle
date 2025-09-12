@@ -1308,53 +1308,34 @@ class DuckRaceGame {
   }
 
   openSettingsDialog() {
-    // Remove any existing dialogs first
-    const existingDialog = document.querySelector(".settings-dialog");
-    if (existingDialog) {
-      existingDialog.remove();
+    const dialog = document.getElementById("settingsDialog");
+    if (!dialog) {
+      console.error("Settings dialog element not found in DOM");
+      return;
     }
 
-    const dialog = document.createElement("div");
-    dialog.className = "settings-dialog";
-    dialog.innerHTML = `
-      <div class="dialog-content" style="position: relative;">
-        <button class="dialog-close-btn" onclick="this.closest('.settings-dialog').remove()">×</button>
-        <h3>⚙️ Settings</h3>
-        <label for="discordWebhookUrl" style="display: block; margin-bottom: 5px; font-weight: bold;">Discord Webhook URL:</label>
-        <input type="url" id="discordWebhookUrl" placeholder="https://discord.com/api/webhooks/..." value="${
-          this.settings.discordWebhookUrl || ""
-        }" style="width: 100%; margin-bottom: 15px;" onchange="window.game.autoSaveSettings()" />
+    // Reset UI state
+    const copyStatus = document.getElementById("copyStatus");
+    if (copyStatus) {
+      copyStatus.textContent = "";
+      copyStatus.style.color = "#666";
+    }
+    const progressBar = document.getElementById("resetProgress");
+    const btnText = document.getElementById("resetBtnText");
+    if (progressBar) progressBar.style.width = "0%";
+    if (btnText) btnText.textContent = "🗑️ Hold to Reset All Data (4s)";
 
-        <div style="margin: 20px 0; padding: 15px; border: 2px solid #4CAF50; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
-          <h4 style="margin: 0 0 10px 0; color: #4CAF50;">📤 Export Profile</h4>
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Export your profile to be accessed on other device(s)</p>
-          <button id="exportProfileBtn" class="export-profile-btn" onclick="window.game.copyProfileLink()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
-            📋 Click to copy link
-          </button>
-          <div id="copyStatus" style="margin-top: 8px; font-size: 12px; color: #666;"></div>
-        </div>
+    const input = document.getElementById("discordWebhookUrl");
+    if (input) {
+      input.value = this.settings.discordWebhookUrl || "";
+      input.focus();
+    }
 
-        <div style="margin: 20px 0; padding: 15px; border: 2px solid #e74c3c; border-radius: 8px; background: rgba(231, 76, 60, 0.1);">
-          <h4 style="margin: 0 0 10px 0; color: #e74c3c;">⚠️ Danger Zone</h4>
-          <button id="resetDataBtn" class="reset-data-btn"
-            onmousedown="window.game.startResetHold()"
-            onmouseup="window.game.stopResetHold()"
-            onmouseleave="window.game.stopResetHold()"
-            ontouchstart="window.game.startResetHold(event)"
-            ontouchend="window.game.stopResetHold()"
-            ontouchcancel="window.game.stopResetHold()">
-            <span id="resetBtnText">🗑️ Hold to Reset All Data (4s)</span>
-            <div id="resetProgress" class="reset-progress"></div>
-          </button>
-        </div>
-
-        <div class="dialog-buttons">
-          <button onclick="this.closest('.settings-dialog').remove()">Close</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(dialog);
-    document.getElementById("discordWebhookUrl").focus();
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.style.display = "block";
+    }
   }
 
   saveSettingsFromDialog() {
@@ -1364,7 +1345,12 @@ class DuckRaceGame {
     this.settings.discordWebhookUrl = discordWebhookUrl;
     this.saveSettings();
 
-    document.querySelector(".settings-dialog").remove();
+    const dialog = document.getElementById("settingsDialog");
+    if (dialog && typeof dialog.close === "function") {
+      dialog.close();
+    } else if (dialog) {
+      dialog.style.display = "none";
+    }
 
     // Show confirmation
     this.log("⚙️ Settings saved successfully!", "skill");
@@ -1485,9 +1471,11 @@ class DuckRaceGame {
     this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
 
     // Close dialog
-    const dialog = document.querySelector(".settings-dialog");
-    if (dialog) {
-      dialog.remove();
+    const dialog = document.getElementById("settingsDialog");
+    if (dialog && typeof dialog.close === "function") {
+      dialog.close();
+    } else if (dialog) {
+      dialog.style.display = "none";
     }
 
     // Reinitialize
