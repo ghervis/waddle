@@ -276,6 +276,64 @@
       </div>
     </dialog>
 
+    <!-- Add Racer Dialog (moved from JS) -->
+    <dialog class="settings-dialog" id="addRacerDialog">
+      <div class="dialog-content">
+        <button
+          class="dialog-close-btn"
+          onclick="document.getElementById('addRacerDialog').close()"
+        >
+          ×
+        </button>
+        <h3>Add New Racer</h3>
+        <input
+          type="text"
+          id="addDialogRacerName"
+          placeholder="Duck name"
+          maxlength="32"
+        />
+
+        <div
+          class="file-upload-area"
+          onclick="document.getElementById('addDialogImageFile').click()"
+          ondrop="window.game && window.game.handleImageDrop(event, 'add')"
+          ondragover="window.game && window.game.handleDragOver(event)"
+          ondragleave="window.game && window.game.handleDragLeave(event)"
+        >
+          <div>📷 Click or drag to upload profile picture</div>
+          <div class="upload-hint">Will be resized to 64x64 pixels</div>
+          <div id="addDialogImagePreview"></div>
+        </div>
+        <input
+          type="file"
+          id="addDialogImageFile"
+          accept="image/*"
+          onchange="window.game && window.game.handleImageUpload(event, 'add')"
+        />
+
+        <button
+          type="button"
+          id="addDialogRandomizeColor"
+          onclick="window.game && window.game.randomizeAddDialogColor()"
+        >
+          Randomize Color 🌈
+        </button>
+        <div class="dialog-buttons">
+          <button
+            type="button"
+            onclick="document.getElementById('addRacerDialog').close()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onclick="window.game && window.game.addRacerFromDialog()"
+          >
+            Add Duck
+          </button>
+        </div>
+      </div>
+    </dialog>
     <script>
       function toggleSidebar() {
         const sidebar = document.getElementById("sidebar");

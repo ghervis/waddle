@@ -1185,52 +1185,59 @@ class DuckRaceGame {
   }
 
   openAddRacerDialog() {
-    // Remove any existing dialogs first
-    const existingDialog = document.querySelector(".racer-dialog");
-    if (existingDialog) {
-      existingDialog.remove();
+    const dialog = document.getElementById("addRacerDialog");
+    if (!dialog) {
+      console.error("Add racer dialog element not found in DOM");
+      return;
     }
 
-    const dialog = document.createElement("div");
-    dialog.className = "racer-dialog add-racer";
+    // Generate a random unique color and reset dialog state
     const randomColor = this.generateUniqueColor();
-    dialog.innerHTML = `
-      <div class="dialog-content" style="background: linear-gradient(to left, ${randomColor}, rgba(255,255,255,0.9)); position: relative;">
-        <button class="dialog-close-btn" onclick="this.closest('.racer-dialog').remove()">×</button>
-        <h3>Add New Racer</h3>
-        <input type="text" id="addDialogRacerName" placeholder="Duck name" maxlength="32" />
-        
-        <div class="file-upload-area" onclick="document.getElementById('addDialogImageFile').click()" ondrop="window.game.handleImageDrop(event, 'add')" ondragover="window.game.handleDragOver(event)" ondragleave="window.game.handleDragLeave(event)">
-          <div>📷 Click or drag to upload profile picture</div>
-          <div style="font-size: 10px; color: #666; margin-top: 5px;">Will be resized to 64x64 pixels</div>
-          <div id="addDialogImagePreview"></div>
-        </div>
-        <input type="file" id="addDialogImageFile" accept="image/*" style="display: none;" onchange="window.game.handleImageUpload(event, 'add')" />
-        
-        <button id="addDialogRandomizeColor" onclick="window.game.randomizeAddDialogColor()" style="margin: 10px 0; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Randomize Color 🌈</button>
-        <div class="dialog-buttons">
-          <button onclick="this.closest('.racer-dialog').remove()">Cancel</button>
-          <button onclick="window.game.addRacerFromDialog()">Add Duck</button>
-        </div>
-      </div>
-    `;
-    // Store the current color for the dialog
     dialog.currentColor = randomColor;
-    dialog.uploadedImage = null; // Store the base64 image data
-    document.body.appendChild(dialog);
-    document.getElementById("addDialogRacerName").focus();
+    dialog.uploadedImage = null;
+
+    // Apply dynamic gradient background on the dialog card
+    const contentEl = dialog.querySelector(".dialog-content");
+    if (contentEl) {
+      contentEl.style.background = `linear-gradient(to left, ${randomColor}, rgba(255,255,255,0.9))`;
+    }
+
+    // Reset fields
+    const nameInput = document.getElementById("addDialogRacerName");
+    if (nameInput) {
+      nameInput.value = "";
+    }
+    const preview = document.getElementById("addDialogImagePreview");
+    if (preview) {
+      preview.innerHTML = "";
+    }
+    const fileInput = document.getElementById("addDialogImageFile");
+    if (fileInput) {
+      fileInput.value = "";
+    }
+
+    // Open dialog
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.style.display = "block";
+    }
+
+    if (nameInput) nameInput.focus();
   }
 
   addRacerFromDialog() {
     const name = document.getElementById("addDialogRacerName").value;
-    const dialog = document.querySelector(".racer-dialog.add-racer");
+    const dialog = document.getElementById("addRacerDialog");
     const color = dialog ? dialog.currentColor : this.generateUniqueColor();
     const imageData = dialog ? dialog.uploadedImage : null;
 
     if (name.trim()) {
       this.addRacer(name, color, imageData);
-      if (dialog) {
-        dialog.remove();
+      if (dialog && typeof dialog.close === "function") {
+        dialog.close();
+      } else if (dialog) {
+        dialog.style.display = "none";
       }
     }
   }
@@ -1281,7 +1288,7 @@ class DuckRaceGame {
         // Store in dialog and show preview
         const dialog =
           dialogType === "add"
-            ? document.querySelector(".racer-dialog.add-racer")
+            ? document.getElementById("addRacerDialog")
             : document.getElementById("editRacerDialog");
         if (dialog) {
           dialog.uploadedImage = base64Data;
@@ -1303,12 +1310,14 @@ class DuckRaceGame {
   }
 
   randomizeAddDialogColor() {
-    const dialog = document.querySelector(".racer-dialog.add-racer");
+    const dialog = document.getElementById("addRacerDialog");
     if (dialog) {
       const newColor = this.generateUniqueColor();
       dialog.currentColor = newColor;
       const dialogContent = dialog.querySelector(".dialog-content");
-      dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
+      if (dialogContent) {
+        dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
+      }
     }
   }
 
@@ -1543,10 +1552,14 @@ class DuckRaceGame {
       return;
     }
 
-    // Remove any existing dynamically created add-racer dialogs only
-    const existingAddDialog = document.querySelector(".racer-dialog.add-racer");
-    if (existingAddDialog) {
-      existingAddDialog.remove();
+    // Ensure Add dialog is closed if it is open
+    const addDlg = document.getElementById("addRacerDialog");
+    if (addDlg) {
+      if (typeof addDlg.close === "function") {
+        addDlg.close();
+      } else {
+        addDlg.style.display = "none";
+      }
     }
 
     const dialog = document.getElementById("editRacerDialog");
@@ -1775,7 +1788,12 @@ class DuckRaceGame {
 
       console.log("Updated custom racer:", uniqueName);
 
-      document.querySelector(".racer-dialog").remove();
+      const dlg2 = document.getElementById("editRacerDialog");
+      if (dlg2 && typeof dlg2.close === "function") {
+        dlg2.close();
+      } else if (dlg2) {
+        dlg2.style.display = "none";
+      }
 
       return;
     }
