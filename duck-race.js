@@ -1324,21 +1324,30 @@ class DuckRaceGame {
         <input type="url" id="discordWebhookUrl" placeholder="https://discord.com/api/webhooks/..." value="${
           this.settings.discordWebhookUrl || ""
         }" style="width: 100%; margin-bottom: 15px;" onchange="window.game.autoSaveSettings()" />
-        
+
+        <div style="margin: 20px 0; padding: 15px; border: 2px solid #4CAF50; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
+          <h4 style="margin: 0 0 10px 0; color: #4CAF50;">📤 Export Profile</h4>
+          <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Share your profile link with others:</p>
+          <button id="exportProfileBtn" class="export-profile-btn" onclick="window.game.copyProfileLink()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
+            📋 Click to copy link
+          </button>
+          <div id="copyStatus" style="margin-top: 8px; font-size: 12px; color: #666;"></div>
+        </div>
+
         <div style="margin: 20px 0; padding: 15px; border: 2px solid #e74c3c; border-radius: 8px; background: rgba(231, 76, 60, 0.1);">
           <h4 style="margin: 0 0 10px 0; color: #e74c3c;">⚠️ Danger Zone</h4>
-          <button id="resetDataBtn" class="reset-data-btn" 
-            onmousedown="window.game.startResetHold()" 
-            onmouseup="window.game.stopResetHold()" 
+          <button id="resetDataBtn" class="reset-data-btn"
+            onmousedown="window.game.startResetHold()"
+            onmouseup="window.game.stopResetHold()"
             onmouseleave="window.game.stopResetHold()"
-            ontouchstart="window.game.startResetHold(event)" 
-            ontouchend="window.game.stopResetHold()" 
+            ontouchstart="window.game.startResetHold(event)"
+            ontouchend="window.game.stopResetHold()"
             ontouchcancel="window.game.stopResetHold()">
             <span id="resetBtnText">🗑️ Hold to Reset All Data (4s)</span>
             <div id="resetProgress" class="reset-progress"></div>
           </button>
         </div>
-        
+
         <div class="dialog-buttons">
           <button onclick="this.closest('.settings-dialog').remove()">Close</button>
         </div>
@@ -1367,6 +1376,44 @@ class DuckRaceGame {
 
     this.settings.discordWebhookUrl = discordWebhookUrl;
     this.saveSettings();
+  }
+
+  async copyProfileLink() {
+    if (!window.okey) {
+      const statusElement = document.getElementById("copyStatus");
+      if (statusElement) {
+        statusElement.textContent = "❌ Profile key not available";
+        statusElement.style.color = "#e74c3c";
+        setTimeout(() => {
+          statusElement.textContent = "";
+        }, 3000);
+      }
+      return;
+    }
+
+    const profileUrl = `https://ghervis.github.io/waddle/#${window.okey}`;
+
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      const statusElement = document.getElementById("copyStatus");
+      if (statusElement) {
+        statusElement.textContent = "✅ Link copied to clipboard!";
+        statusElement.style.color = "#4CAF50";
+        setTimeout(() => {
+          statusElement.textContent = "";
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Failed to copy link:", error);
+      const statusElement = document.getElementById("copyStatus");
+      if (statusElement) {
+        statusElement.textContent = "❌ Failed to copy link";
+        statusElement.style.color = "#e74c3c";
+        setTimeout(() => {
+          statusElement.textContent = "";
+        }, 3000);
+      }
+    }
   }
 
   startResetHold(event) {
