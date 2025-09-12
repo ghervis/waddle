@@ -3489,32 +3489,38 @@ class DuckRaceGame {
   }
 }
 
+window.importProfile = async () => {
+  if (!/^#KEY\-/.test(window.location.hash)) {
+    return;
+  }
+
+  const okeyValue = window.location.hash.replace("#", "");
+  try {
+    const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${okeyValue}`;
+    const corsProxyFetchProfileUrlUrl = `https://corsproxy.io/?${encodeURIComponent(
+      fetchProfileUrl
+    )}`;
+
+    const response = await fetch(corsProxyFetchProfileUrlUrl);
+    const jsonResponse = await response.json();
+
+    window.localStorage.setItem("rankedRacerId", jsonResponse.id);
+    window.localStorage.setItem("rankedRacerName", jsonResponse.name);
+    window.localStorage.setItem(
+      "rankedRacerProfilePicture",
+      jsonResponse.profilePicture || ""
+    );
+    window.localStorage.setItem("okey", okeyValue);
+    window.location.hash = "";
+  } catch (e) {
+    console.error("Error fetching profile with OKEY from URL:", e);
+    return;
+  }
+};
+
 // Initialize the game when page loads
 document.addEventListener("DOMContentLoaded", async () => {
-  if (/^#KEY\-/.test(window.location.hash)) {
-    const okeyValue = window.location.hash.replace("#", "");
-    try {
-      const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${okeyValue}`;
-      const corsProxyFetchProfileUrlUrl = `https://corsproxy.io/?${encodeURIComponent(
-        fetchProfileUrl
-      )}`;
-
-      const response = await fetch(corsProxyFetchProfileUrlUrl);
-      const jsonResponse = await response.json();
-
-      window.localStorage.setItem("rankedRacerId", jsonResponse.id);
-      window.localStorage.setItem("rankedRacerName", jsonResponse.name);
-      window.localStorage.setItem(
-        "rankedRacerProfilePicture",
-        jsonResponse.profilePicture || ""
-      );
-      window.localStorage.setItem("okey", okeyValue);
-      window.location.hash = "";
-    } catch (e) {
-      console.error("Error fetching profile with OKEY from URL:", e);
-      return;
-    }
-  }
+  await window.importProfile();
 
   window.game = new DuckRaceGame();
 
