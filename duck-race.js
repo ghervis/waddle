@@ -1327,7 +1327,7 @@ class DuckRaceGame {
 
         <div style="margin: 20px 0; padding: 15px; border: 2px solid #4CAF50; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
           <h4 style="margin: 0 0 10px 0; color: #4CAF50;">📤 Export Profile</h4>
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Share your profile link with others:</p>
+          <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Export your profile to be accessed on other device(s)</p>
           <button id="exportProfileBtn" class="export-profile-btn" onclick="window.game.copyProfileLink()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px; width: 100%;">
             📋 Click to copy link
           </button>
