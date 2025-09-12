@@ -38,6 +38,7 @@ class DuckRaceGame {
     // Initialize duck names pool
     this.customRacerNames = this.loadCustomRacerNames();
     this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
+    this.customRacerColors = this.loadCustomRacerColors();
 
     this.generateRankedRacerId();
 
@@ -814,6 +815,33 @@ class DuckRaceGame {
     return customRacerProfilePictures;
   }
 
+  loadCustomRacerColors() {
+    const saved = localStorage.getItem("customRacerColors");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+
+    const customRacerColors = [
+      "#FFD700",
+      "#FF6347",
+      "#32CD32",
+      "#1E90FF",
+      "#DA70D6",
+    ];
+    localStorage.setItem(
+      "customRacerColors",
+      JSON.stringify(customRacerColors)
+    );
+    return customRacerColors;
+  }
+
+  saveDefaultRacerColors() {
+    localStorage.setItem(
+      "customRacerColors",
+      JSON.stringify(this.customRacerColors)
+    );
+  }
+
   saveDefaultRacerProfilePictures() {
     localStorage.setItem(
       "customRacerProfilePictures",
@@ -896,27 +924,27 @@ class DuckRaceGame {
     const customRacers = [
       {
         name: this.customRacerNames[0] || "Duck1",
-        color: "#FFD700",
+        color: this.customRacerColors[0],
         profilePicture: this.customRacerProfilePictures[0] || null,
       },
       {
         name: this.customRacerNames[1] || "Duck2",
-        color: "#FF6347",
+        color: this.customRacerColors[1],
         profilePicture: this.customRacerProfilePictures[1] || null,
       },
       {
         name: this.customRacerNames[2] || "Duck3",
-        color: "#32CD32",
+        color: this.customRacerColors[2],
         profilePicture: this.customRacerProfilePictures[2] || null,
       },
       {
         name: this.customRacerNames[3] || "Duck4",
-        color: "#1E90FF",
+        color: this.customRacerColors[3],
         profilePicture: this.customRacerProfilePictures[3] || null,
       },
       {
         name: this.customRacerNames[4] || "Duck5",
-        color: "#DA70D6",
+        color: this.customRacerColors[4],
         profilePicture: this.customRacerProfilePictures[4] || null,
       },
     ];
@@ -1482,6 +1510,7 @@ class DuckRaceGame {
     localStorage.removeItem("duckRaceSettings");
     localStorage.removeItem("customRacerNames");
     localStorage.removeItem("customRacerProfilePictures");
+    localStorage.removeItem("customRacerColors");
 
     // Reset game state
     this.customRacers = [];
@@ -1491,6 +1520,7 @@ class DuckRaceGame {
     this.settings = {};
     this.customRacerNames = this.loadCustomRacerNames();
     this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
+    this.customRacerColors = this.loadCustomRacerColors();
 
     // Close dialog
     const dialog = document.getElementById("settingsDialog");
@@ -1802,6 +1832,8 @@ class DuckRaceGame {
         this.customRacerProfilePictures[duckIndex] = imageData;
         this.saveDefaultRacerProfilePictures();
       }
+      this.customRacerColors[duckIndex] = color;
+      this.saveDefaultRacerColors();
 
       // Update the leaderboard to reflect changes
       this.updateLeaderboard();
