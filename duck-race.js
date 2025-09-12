@@ -2043,9 +2043,7 @@ class DuckRaceGame {
     // Disable race title editing during race
     this.raceTitleInput.disabled = true;
 
-    this.log(
-      "🏁 Race Started! Using advanced simulation engine with position auto-correction!"
-    );
+    this.log("🏁 Race Started!");
 
     // Play start sound
     this.playSound("start");
@@ -2871,8 +2869,6 @@ class DuckRaceGame {
         `Final time: ${(winnerData.finishTime / 1000).toFixed(2)} seconds`,
         "winner"
       );
-
-      console.log("this", this);
 
       // Log simulation statistics
       this.log("📊 Final Standings (Simulated):");
