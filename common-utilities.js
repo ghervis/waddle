@@ -23,3 +23,5 @@ window.rgbToHex = (rgbString) => {
   // 4. Concatenate and prepend "#"
   return `#${hexR}${hexG}${hexB}`;
 };
+
+window.pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];

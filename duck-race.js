@@ -33,6 +33,8 @@ class DuckRaceGame {
     this.lastFrameTime = 0;
     this.gameLoopRunning = false; // Prevent double execution
 
+    this.randomRemarkTimeout = null;
+
     // Initialize duck names pool
     this.customRacerNames = this.loadCustomRacerNames();
     this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
@@ -279,7 +281,7 @@ class DuckRaceGame {
           duck.finishTime = raceTimeMs; // Keep finishTime in milliseconds
           // Smooth animation to finish line instead of immediate warp
           this.smoothMoveToPosition(duck, this.convertMetersToPixels(4000));
-          this.log(`🏁 ${duck.name} finished!`);
+          this.log(`🏁 ${duck.name} finished!`, "", true);
           return;
         }
 
@@ -361,7 +363,8 @@ class DuckRaceGame {
           currentLeaderData.mt > 50 &&
           !this.ducks.some((d) => d.finished)
         ) {
-          this.log(`🏆 ${currentLeader.name} takes the lead!`, "leader");
+          this.log(`1️⃣ ${currentLeader.name} takes the lead!`, "leader");
+          this.takesTheLead(currentLeader.name);
           this.previousLeaderId = currentLeaderData.i;
         }
 
@@ -644,6 +647,12 @@ class DuckRaceGame {
         // Use smooth animation to finish line instead of immediate positioning
         this.smoothMoveToPosition(finisher, this.convertMetersToPixels(4000));
         this.log(`🏁 ${finisher.name} finished the race!`);
+        if (1 === finisher.position) {
+          setTimeout(
+            () => this.speakImmediately(`${finisher.name}, wins the race`),
+            500
+          );
+        }
       }
     } else if (event.s) {
       // Skill event (has skill field)
@@ -2116,7 +2125,7 @@ class DuckRaceGame {
     // Disable race title editing during race
     this.raceTitleInput.disabled = true;
 
-    this.log("🟩 Race Started!");
+    this.log("🟩 Race Started!", "", true);
 
     // Play start sound
     this.playSound("start");
@@ -3486,6 +3495,90 @@ class DuckRaceGame {
   isRankedMode() {
     const raceModeToggle = document.getElementById("raceModeToggle");
     return raceModeToggle && raceModeToggle.checked;
+  }
+
+  speakImmediately(message) {
+    const utterance = this.assembleUtterance(message);
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }
+
+  assembleUtterance(message) {
+    const cleanMessage = message.replace(
+      /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu,
+      ""
+    );
+    const speechSynthesisUtterance = new SpeechSynthesisUtterance(cleanMessage);
+    speechSynthesisUtterance.lang = "en-US";
+    speechSynthesisUtterance.rate = 1.5;
+    speechSynthesisUtterance.pitch = 2;
+
+    const voices = speechSynthesis
+      .getVoices()
+      .filter((voice) => voice.lang === "en-US");
+    speechSynthesisUtterance.voice = voices[0];
+
+    return speechSynthesisUtterance;
+  }
+
+  takesTheLead(duckName) {
+    if (!this.raceActive) {
+      return;
+    }
+
+    const randomTakesTheLead = window.pickRandom([
+      `And ${duckName}, takes the lead!`,
+      `It's ${duckName}, in the lead!`,
+      `${duckName}, surges ahead!`,
+      `${duckName}, is now leading!`,
+      `What a move by ${duckName}, taking the lead!`,
+      `${duckName}, leads the pack!`,
+      `Now it's ${duckName}, in front!`,
+      `${duckName}, grabs the lead!`,
+      `Look at ${duckName}, taking charge!`,
+      `${duckName}, is out in front!`,
+      `It's ${duckName}, leading the way!`,
+      `The lead changes to ${duckName}!`,
+      `${duckName}, takes over the lead!`,
+      `It's ${duckName}, at the front!`,
+      `${duckName}, moves into the lead!`,
+    ]);
+    clearTimeout(this.randomRemarkTimeout);
+    this.speakImmediately(randomTakesTheLead);
+
+    0 === Math.floor(Math.random() * 2) && this.randomRemark(duckName);
+  }
+
+  randomRemark(duckName) {
+    if (!this.raceActive) {
+      return;
+    }
+
+    const randomRemark = window.pickRandom([
+      `What a performance by ${duckName}!`,
+      `${duckName} is really showing their stuff!`,
+      `Keep an eye on ${duckName}, they're on fire!`,
+      `${duckName} is making waves out there!`,
+      `Look at ${duckName}, what a racer!`,
+      `${duckName} is in the zone!`,
+      `This is exciting, the ducks are showing their skills!`,
+      `It really comes down through all the years of hard work for these racers!`,
+      `We are really witnessing the best of the best here!`,
+      `World class racing from all these ducks!`,
+      `My master once told me, it's not about winning, it's about how you play the game.`,
+      `These ducks are giving it their all!`,
+      `You can really see the determination in ${duckName}'s eyes!`,
+      `${duckName} is a true competitor!`,
+      `The crowd is going wild for ${duckName}!`,
+      `The comeback is real!`,
+      `It's not over until it's over!`,
+      `Never say never!`,
+      `Anything can happen in duck racing!`,
+    ]);
+
+    this.randomRemarkTimeout = setTimeout(() => {
+      this.speakImmediately(randomRemark);
+    }, 3000);
   }
 }
 
