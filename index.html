@@ -54,6 +54,10 @@
       <source src="duck-song.mp3" type="audio/mpeg" />
     </audio>
 
+    <!-- Finish Cheering Sound -->
+    <audio id="finishCheering" preload="auto">
+      <source src="finish-cheering.mp3" type="audio/mpeg" />
+    </audio>
     <button class="collapse-btn" id="collapseBtn" onclick="toggleSidebar()">
       ◀
     </button>
@@ -63,6 +67,7 @@
       <div class="sidebar-header">
         <h2>🦆 Racers</h2>
         <div class="header-buttons">
+          <button id="addRacerBtn" class="header-btn add-btn">➕ Add</button>
           <div class="race-mode-toggle">
             <input type="checkbox" id="raceModeToggle" class="toggle-input" />
             <label for="raceModeToggle" class="toggle-label">
@@ -71,7 +76,6 @@
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <button id="addRacerBtn" class="header-btn add-btn">➕ Add</button>
           <button id="startBtn" class="header-btn start-btn">
             🏁 <span class="startBtn-text">Start</span>
           </button>

@@ -78,6 +78,7 @@ class DuckRaceGame {
     };
 
     this.updateRacersList();
+    this.updateAddButtonVisibility();
     this.draw();
     this.generateBackgroundElements();
     this.setupEventListeners();
@@ -649,6 +650,7 @@ class DuckRaceGame {
         this.smoothMoveToPosition(finisher, this.convertMetersToPixels(4000));
         this.log(`🏁 ${finisher.name} finished the race!`);
         if (1 === finisher.position) {
+          clearTimeout(this.randomRemarkTimeout);
           setTimeout(
             () => this.speakImmediately(`${finisher.name}, wins the race`),
             500
@@ -973,6 +975,7 @@ class DuckRaceGame {
       this.initializeRankedDuck();
       this.updateLeaderboard();
       this.draw();
+      this.updateAddButtonVisibility();
       return;
     }
 
@@ -1028,6 +1031,7 @@ class DuckRaceGame {
     this.updateLeaderboard();
 
     this.draw();
+    this.updateAddButtonVisibility();
   }
 
   generateRandomColor() {
@@ -2191,9 +2195,8 @@ class DuckRaceGame {
     // Re-enable the start button
     this.toggleStartBtn(true);
 
-    // Hide Add Racer button during race
-    const addBtn = document.getElementById("addRacerBtn");
-    addBtn.classList.add("hidden");
+    // Update add button visibility
+    this.updateAddButtonVisibility();
 
     // Disable race mode toggle during race
     if (window.updateRaceModeToggleState) {
@@ -2395,6 +2398,47 @@ class DuckRaceGame {
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText("Winner!", centerX, centerY + 95);
+
+    // Draw top 10 finishers vertically on the right side
+    if (this.simulationStandings) {
+      const top10 = this.simulationStandings.slice(0, 10);
+      const startY = 100;
+      const lineHeight = 18;
+      const listX = 550; // Right side start
+      const titleY = 70;
+
+      let endSummaryTitleText = "Congratulations";
+
+      if (this.simulationStandings.length > 10) {
+        endSummaryTitleText = `Top 10 Finishers`;
+      }
+
+      // Title
+      ctx.font = "bold 16px Arial";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("Top 10 Finishers", listX, titleY);
+
+      // Draw each finisher
+      top10.forEach((standing, index) => {
+        const y = startY + index * lineHeight;
+        const pos = index + 1;
+        let positionText = pos.toString();
+
+        // Position
+        ctx.font = "normal 12px Arial";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillText(positionText, listX, y);
+
+        // Name (find duck for color)
+        const duck = this.ducks.find((d) => d.id === standing.id);
+        const nameColor = duck ? duck.color : "#fff";
+        ctx.font = "bold 12px Arial";
+        ctx.fillStyle = nameColor;
+        ctx.fillText(standing.name, listX + 30, y);
+      });
+    }
 
     ctx.restore();
   }
@@ -2969,9 +3013,8 @@ class DuckRaceGame {
     startBtn.innerHTML = "🏁 <span class='startBtn-text'>Start</span>";
     startBtn.disabled = false;
 
-    // Show Add Racer button again
-    const addBtn = document.getElementById("addRacerBtn");
-    addBtn.classList.remove("hidden");
+    // Update add button visibility
+    this.updateAddButtonVisibility();
 
     // Re-enable race mode toggle after race
     if (window.updateRaceModeToggleState) {
@@ -3001,13 +3044,20 @@ class DuckRaceGame {
       window.stopBackgroundMusic();
     }
 
+    // Play finish cheering sound
+    const finishCheeringAudio = document.getElementById("finishCheering");
+    if (finishCheeringAudio) {
+      finishCheeringAudio.currentTime = 0;
+      finishCheeringAudio
+        .play()
+        .catch((e) => console.log("Could not play finish cheering:", e));
+    }
     const startBtn = document.getElementById("startBtn");
     startBtn.innerHTML = "🏁 <span class='startBtn-text'>Start</span>";
     startBtn.disabled = false;
 
-    // Show Add Racer button again
-    const addBtn = document.getElementById("addRacerBtn");
-    addBtn.classList.remove("hidden");
+    // Update add button visibility
+    this.updateAddButtonVisibility();
 
     // Re-enable race title editing
     this.raceTitleInput.disabled = false;
@@ -3583,6 +3633,15 @@ class DuckRaceGame {
     return raceModeToggle && raceModeToggle.checked;
   }
 
+  updateAddButtonVisibility() {
+    const addBtn = document.getElementById("addRacerBtn");
+    if (this.isRankedMode() || this.raceActive) {
+      addBtn.classList.add("hidden");
+    } else {
+      addBtn.classList.remove("hidden");
+    }
+  }
+
   speakImmediately(message) {
     const utterance = this.assembleUtterance(message);
     speechSynthesis.cancel();
@@ -3632,7 +3691,7 @@ class DuckRaceGame {
     clearTimeout(this.randomRemarkTimeout);
     this.speakImmediately(randomTakesTheLead);
 
-    0 === Math.floor(Math.random() * 2) && this.randomRemark(duckName);
+    Math.floor(Math.random() * 4) > 0 && this.randomRemark(duckName);
   }
 
   randomRemark(duckName) {
@@ -3643,7 +3702,7 @@ class DuckRaceGame {
     const randomRemark = window.pickRandom([
       `What a performance by ${duckName}!`,
       `${duckName} is really showing their stuff!`,
-      `Keep an eye on ${duckName}, they're on fire!`,
+      `Keep an eye on ${duckName}, that duck is on fire!`,
       `${duckName} is making waves out there!`,
       `Look at ${duckName}, what a racer!`,
       `${duckName} is in the zone!`,
