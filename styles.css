@@ -1385,3 +1385,62 @@ input[type="color"].color-picker {
 #addDialogImageFile {
   display: none;
 }
+
+.settings-section.music {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.settings-section.music h4 {
+  color: #ffd700;
+}
+
+.mute-btn {
+  transition: all 0.3s ease;
+}
+
+.mute-btn.muted {
+  background: #ff4757;
+  color: white;
+}
+
+.mute-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.mute-btn.muted:hover {
+  background: #ff3838;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #ddd;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffd700;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffd700;
+  cursor: pointer;
+  border: none;
+}
+
+input[type="range"]:hover {
+  background: #ccc;
+}

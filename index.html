@@ -180,6 +180,43 @@
             />
           </div>
 
+          <div class="settings-section music">
+            <h4>🎵 Music Volume</h4>
+            <p>Control the volume of background music during races</p>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 10px;
+              "
+            >
+              <input
+                type="range"
+                id="musicVolumeSlider"
+                min="0"
+                max="100"
+                value="30"
+                style="flex: 1"
+              />
+              <button
+                id="musicMuteBtn"
+                class="mute-btn"
+                style="
+                  width: 40px;
+                  height: 40px;
+                  border-radius: 50%;
+                  border: none;
+                  background: #ddd;
+                  cursor: pointer;
+                  font-size: 18px;
+                "
+              >
+                🔊
+              </button>
+            </div>
+          </div>
+
           <div class="settings-section export">
             <h4>📤 Export Profile</h4>
             <p>Export your profile to be accessed on other device(s)</p>
@@ -392,10 +429,33 @@
         backgroundMusic.muted = isMuted;
         volumeBtn.textContent = isMuted ? "🔇" : "🔊";
         volumeBtn.classList.toggle("muted", isMuted);
+
+        // Update settings mute button if it exists
+        const musicMuteBtn = document.getElementById("musicMuteBtn");
+        if (musicMuteBtn) {
+          musicMuteBtn.textContent = isMuted ? "🔇" : "🔊";
+          musicMuteBtn.classList.toggle("muted", isMuted);
+        }
+
+        const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+        if (musicVolumeSlider) {
+          if (isMuted) {
+            // Mute: set slider to 0
+            musicVolumeSlider.value = 0;
+          } else {
+            // Unmute: restore to previous volume
+            musicVolumeSlider.value = Math.round(musicVolume * 100);
+            backgroundMusic.volume = musicVolume;
+          }
+        }
       }
 
+      // Load music volume
+      let musicVolume = parseFloat(localStorage.getItem("musicVolume")) || 0.3;
+      let previousVolume = musicVolume; // Track last non-zero volume for restore on unmute
+
       // Initialize background music with saved state
-      backgroundMusic.volume = 0.3; // 30% volume
+      backgroundMusic.volume = musicVolume;
       backgroundMusic.muted = isMuted;
       volumeBtn.textContent = isMuted ? "🔇" : "🔊";
       volumeBtn.classList.toggle("muted", isMuted);
@@ -491,6 +551,42 @@
             }
           });
         });
+
+        // Music volume slider handler
+        const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+        if (musicVolumeSlider) {
+          musicVolumeSlider.value = isMuted ? 0 : Math.round(musicVolume * 100);
+          musicVolumeSlider.addEventListener("input", function (e) {
+            const newVolume = parseFloat(e.target.value) / 100;
+            if (isMuted && newVolume > 0) {
+              // If muted and sliding to >0, unmute
+              isMuted = false;
+              backgroundMusic.muted = false;
+              localStorage.setItem("volumeMuted", "false");
+
+              // Update buttons
+              volumeBtn.textContent = "🔊";
+              volumeBtn.classList.remove("muted");
+
+              const musicMuteBtn = document.getElementById("musicMuteBtn");
+              if (musicMuteBtn) {
+                musicMuteBtn.textContent = "🔊";
+                musicMuteBtn.classList.remove("muted");
+              }
+            }
+            backgroundMusic.volume = newVolume;
+            musicVolume = newVolume;
+            localStorage.setItem("musicVolume", newVolume);
+          });
+        }
+
+        // Settings mute button init and sync
+        const musicMuteBtn = document.getElementById("musicMuteBtn");
+        if (musicMuteBtn) {
+          musicMuteBtn.textContent = isMuted ? "🔇" : "🔊";
+          musicMuteBtn.classList.toggle("muted", isMuted);
+          musicMuteBtn.addEventListener("click", toggleVolume);
+        }
       });
 
       // Initial section visibility update
