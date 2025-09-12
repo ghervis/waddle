@@ -889,17 +889,78 @@ class DuckRaceGame {
   }
 
   removeRacer(id) {
-    // Convert id to string for comparison
-    const racerId = String(id);
+    const racerIdStr = String(id);
+    const defaultIndex = parseInt(racerIdStr);
+    let racerName;
+    let isDefault = false;
+    if (
+      !isNaN(defaultIndex) &&
+      defaultIndex >= 0 &&
+      defaultIndex < 5 &&
+      !this.isRankedMode()
+    ) {
+      racerName = this.duckNames[defaultIndex] || `Duck ${defaultIndex + 1}`;
+      isDefault = true;
+    } else {
+      const racer = this.customRacers.find((r) => String(r.id) === racerIdStr);
+      if (racer) {
+        racerName = racer.name;
+        isDefault = false;
+      } else {
+        console.warn("Racer not found:", racerIdStr);
+        return;
+      }
+    }
+    const dialog = document.getElementById("removeRacerDialog");
+    if (!dialog) {
+      console.error("Remove racer dialog not found");
+      return;
+    }
+    dialog.racerId = id;
+    dialog.isDefaultRacer = isDefault;
+    document.getElementById(
+      "removeRacerMessage"
+    ).textContent = `Are you sure you want to remove ${racerName}?`;
+    dialog.showModal();
+  }
 
-    const racer = this.customRacers.find((r) => String(r.id) === racerId);
-    if (racer && confirm(`Are you sure you want to delete ${racer.name}?`)) {
+  removeRacerConfirmed() {
+    const dialog = document.getElementById("removeRacerDialog");
+    if (!dialog.racerId) return;
+    const id = dialog.racerId;
+    const isDefault = dialog.isDefaultRacer;
+    const racerIdStr = String(id);
+    if (isDefault) {
+      const defaultIndex = parseInt(racerIdStr);
+      // Reset default racer slot
+      this.customRacerNames[defaultIndex] = this.getRandomDuckName();
+      this.customRacerColors[defaultIndex] = [
+        "#FFD700",
+        "#FF6347",
+        "#32CD32",
+        "#1E90FF",
+        "#DA70D6",
+      ][defaultIndex];
+      this.customRacerProfilePictures[defaultIndex] = null;
+
+      // Save to localStorage
+      localStorage.setItem(
+        "customRacerNames",
+        JSON.stringify(this.customRacerNames)
+      );
+      this.saveDefaultRacerColors();
+      this.saveDefaultRacerProfilePictures();
+
+      this.updateRacersList();
+    } else {
+      // Custom racer
       this.customRacers = this.customRacers.filter(
-        (racer) => String(racer.id) !== racerId
+        (racer) => String(racer.id) !== racerIdStr
       );
       this.saveCustomRacers();
       this.updateRacersList();
     }
+    dialog.close();
   }
 
   updateRacersList() {
@@ -1615,7 +1676,7 @@ class DuckRaceGame {
     const titleEl = document.getElementById("editRacerTitle");
     if (titleEl) {
       titleEl.textContent = `Edit Racer${
-        isRankedModeRacer ? " (Ranked)" : isCustomRacer ? " (Default)" : ""
+        isRankedModeRacer ? " (Ranked)" : isCustomRacer ? " (Casual)" : ""
       }`;
     }
 
@@ -3117,8 +3178,16 @@ class DuckRaceGame {
       const entry = document.createElement("div");
       entry.className = "racer-config";
 
-      // Find the custom racer that matches this name and position
-      let racerId = duck.id || index;
+      // Compute correct racerId for edit/remove
+      let racerId;
+      if (this.isRankedMode()) {
+        racerId = duck.id;
+      } else if (index >= 5) {
+        const customIndex = index - 5;
+        racerId = this.customRacers[customIndex].id;
+      } else {
+        racerId = index;
+      }
       let profilePicture = duck.profilePicture || null;
       let isOwnedByUser = this.isRankedMode()
         ? duck.id === window.rankedRacerId
@@ -3136,7 +3205,7 @@ class DuckRaceGame {
 
       console.debug("editButton", editButton);
 
-      // Show remove button only for custom racers (not for ranked mode racers)
+      // Show remove button for all racers in casual mode
       const removeButton = !this.isRankedMode()
         ? `<button onclick="window.game.removeRacer('${racerId}')" class="remove-btn-small">✖</button>`
         : "";

@@ -347,6 +347,29 @@
         </div>
       </div>
     </dialog>
+    <!-- Remove Racer Dialog -->
+    <dialog class="settings-dialog" id="removeRacerDialog">
+      <div class="dialog-content">
+        <button
+          class="dialog-close-btn"
+          onclick="document.getElementById('removeRacerDialog').close()"
+        >
+          ×
+        </button>
+        <h3>Remove Racer</h3>
+        <p id="removeRacerMessage">
+          Are you sure you want to remove this racer?
+        </p>
+        <div class="dialog-buttons">
+          <button
+            onclick="document.getElementById('removeRacerDialog').close()"
+          >
+            Cancel
+          </button>
+          <button onclick="window.game.removeRacerConfirmed()">Remove</button>
+        </div>
+      </div>
+    </dialog>
     <script src="common-utilities.js"></script>
     <script>
       function toggleSidebar() {
