@@ -1208,17 +1208,11 @@ class DuckRaceGame {
       colorPicker.value = window.rgbToHex(randomColor);
     }
 
-    // Apply dynamic gradient background on the dialog card
-    const contentEl = dialog.querySelector(".dialog-content");
-
     // Add event listener for color picker if not already added
     if (colorPicker && !colorPicker.dataset.listenerAdded) {
       colorPicker.onchange = (e) => {
         const selectedColor = e.target.value;
         dialog.currentColor = selectedColor;
-        if (contentEl) {
-          contentEl.style.background = `linear-gradient(to left, ${selectedColor}, rgba(255,255,255,0.9))`;
-        }
       };
       colorPicker.dataset.listenerAdded = "true";
     }
@@ -1595,12 +1589,6 @@ class DuckRaceGame {
       }`;
     }
 
-    // Update dialog background with current racer color
-    const dialogContentEl = dialog.querySelector(".dialog-content");
-    if (dialogContentEl) {
-      dialogContentEl.style.background = `linear-gradient(to left, ${racer.color}, rgba(255,255,255,0.9))`;
-    }
-
     // Set initial color picker value
     const colorPicker = document.getElementById("editDialogColorPicker");
     if (colorPicker) {
@@ -1612,9 +1600,6 @@ class DuckRaceGame {
       colorPicker.onchange = (e) => {
         const selectedColor = e.target.value;
         dialog.currentColor = selectedColor;
-        if (dialogContentEl) {
-          dialogContentEl.style.background = `linear-gradient(to left, ${selectedColor}, rgba(255,255,255,0.9))`;
-        }
       };
       colorPicker.dataset.listenerAdded = "true";
     }
