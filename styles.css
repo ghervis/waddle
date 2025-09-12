@@ -1313,3 +1313,31 @@ details:not([open]) {
     transform: translateX(40px);
   }
 }
+
+/* Edit Racer Dialog extracted styles */
+#editDialogRandomizeColor {
+  margin: 10px 0;
+  padding: 8px 16px;
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#nameError {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-top: 5px;
+  display: none;
+}
+
+.upload-hint {
+  font-size: 10px;
+  color: #666;
+  margin-top: 5px;
+}
+
+#editDialogImageFile {
+  display: none;
+}

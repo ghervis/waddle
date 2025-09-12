@@ -1192,7 +1192,7 @@ class DuckRaceGame {
     }
 
     const dialog = document.createElement("div");
-    dialog.className = "racer-dialog";
+    dialog.className = "racer-dialog add-racer";
     const randomColor = this.generateUniqueColor();
     dialog.innerHTML = `
       <div class="dialog-content" style="background: linear-gradient(to left, ${randomColor}, rgba(255,255,255,0.9)); position: relative;">
@@ -1223,13 +1223,15 @@ class DuckRaceGame {
 
   addRacerFromDialog() {
     const name = document.getElementById("addDialogRacerName").value;
-    const dialog = document.querySelector(".racer-dialog");
+    const dialog = document.querySelector(".racer-dialog.add-racer");
     const color = dialog ? dialog.currentColor : this.generateUniqueColor();
     const imageData = dialog ? dialog.uploadedImage : null;
 
     if (name.trim()) {
       this.addRacer(name, color, imageData);
-      document.querySelector(".racer-dialog").remove();
+      if (dialog) {
+        dialog.remove();
+      }
     }
   }
 
@@ -1277,7 +1279,10 @@ class DuckRaceGame {
         const base64Data = canvas.toDataURL("image/png");
 
         // Store in dialog and show preview
-        const dialog = document.querySelector(".racer-dialog");
+        const dialog =
+          dialogType === "add"
+            ? document.querySelector(".racer-dialog.add-racer")
+            : document.getElementById("editRacerDialog");
         if (dialog) {
           dialog.uploadedImage = base64Data;
 
@@ -1298,7 +1303,7 @@ class DuckRaceGame {
   }
 
   randomizeAddDialogColor() {
-    const dialog = document.querySelector(".racer-dialog");
+    const dialog = document.querySelector(".racer-dialog.add-racer");
     if (dialog) {
       const newColor = this.generateUniqueColor();
       dialog.currentColor = newColor;
@@ -1538,103 +1543,126 @@ class DuckRaceGame {
       return;
     }
 
-    // Remove any existing dialogs first
-    const existingDialog = document.querySelector(".racer-dialog");
-    if (existingDialog) {
-      existingDialog.remove();
+    // Remove any existing dynamically created add-racer dialogs only
+    const existingAddDialog = document.querySelector(".racer-dialog.add-racer");
+    if (existingAddDialog) {
+      existingAddDialog.remove();
     }
 
-    const dialog = document.createElement("div");
-    dialog.className = "racer-dialog";
-    dialog.innerHTML = `
-      <div class="dialog-content" style="background: linear-gradient(to left, ${
-        racer.color
-      }, rgba(255,255,255,0.9)); position: relative;">
-        <button class="dialog-close-btn" onclick="this.closest('.racer-dialog').remove()">×</button>
-        <h3>Edit Racer${
-          isRankedModeRacer ? " (Ranked)" : isCustomRacer ? " (Default)" : ""
-        }</h3>
-        <form id="editRacerForm">
-          <label for="editDialogRacerName" style="display: block; margin-bottom: 5px; font-weight: bold;">Name (2-16 alphanumeric characters) *</label>
-          <input type="text" id="editDialogRacerName" name="racerName" placeholder="Duck name" pattern="[A-Za-z0-9]{2,16}" minlength="2" maxlength="16" value="${
-            racer.name
-          }" required />
-          <div id="nameError" style="color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;">Name must be 2-16 alphanumeric characters only</div>
-          
-          <div class="file-upload-area" onclick="document.getElementById('editDialogImageFile').click()" ondrop="window.game.handleImageDrop(event, 'edit')" ondragover="window.game.handleDragOver(event)" ondragleave="window.game.handleDragLeave(event)">
-            <div>📷 Click or drag to upload profile picture</div>
-            <div style="font-size: 10px; color: #666; margin-top: 5px;">Will be resized to 64x64 pixels</div>
-            <div id="editDialogImagePreview">${
-              racer.profilePicture
-                ? `<img src="${racer.profilePicture}" class="preview-image" alt="Current" />`
-                : ""
-            }</div>
-          </div>
-          <input type="file" id="editDialogImageFile" accept="image/*" style="display: none;" onchange="window.game.handleImageUpload(event, 'edit')" />
-          
-          <button type="button" onclick="window.game.randomizeRacerColor('${id}')" style="margin: 10px 0; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">Randomize Color 🌈</button>
-          <div class="dialog-buttons">
-            <button type="button" onclick="this.closest('.racer-dialog').remove()">Cancel</button>
-            <button type="submit">Update Duck</button>
-          </div>
-        </form>
-      </div>
-    `;
+    const dialog = document.getElementById("editRacerDialog");
+    if (!dialog) {
+      console.error("Edit racer dialog element not found in DOM");
+      return;
+    }
+
+    // Persist state on dialog element
     dialog.uploadedImage = racer.profilePicture; // Start with existing image
     dialog.isRankedModeRacer = isRankedModeRacer; // Store for later use
     dialog.isCustomRacer = isCustomRacer; // Store for later use
-    document.body.appendChild(dialog);
 
-    // Add form validation and submission handler
+    // Update title with mode suffix
+    const titleEl = document.getElementById("editRacerTitle");
+    if (titleEl) {
+      titleEl.textContent = `Edit Racer${
+        isRankedModeRacer ? " (Ranked)" : isCustomRacer ? " (Default)" : ""
+      }`;
+    }
+
+    // Update dialog background with current racer color
+    const dialogContentEl = dialog.querySelector(".dialog-content");
+    if (dialogContentEl) {
+      dialogContentEl.style.background = `linear-gradient(to left, ${racer.color}, rgba(255,255,255,0.9))`;
+    }
+
+    // Populate form fields
     const form = document.getElementById("editRacerForm");
     const nameInput = document.getElementById("editDialogRacerName");
     const nameError = document.getElementById("nameError");
+    if (nameInput) {
+      nameInput.value = racer.name || "";
+      nameInput.style.borderColor = "";
+    }
+    if (nameError) {
+      nameError.style.display = "none";
+      nameError.textContent = "Name must be 2-16 alphanumeric characters only";
+    }
 
-    // Real-time validation
-    nameInput.addEventListener("input", () => {
-      const value = nameInput.value;
-      const isValid = /^[A-Za-z0-9]{2,16}$/.test(value);
+    // Set image preview
+    const preview = document.getElementById("editDialogImagePreview");
+    if (preview) {
+      preview.innerHTML =
+        racer.profilePicture && racer.profilePicture.trim() !== ""
+          ? `<img src="${racer.profilePicture}" class="preview-image" alt="Current" />`
+          : "";
+    }
 
-      if (value && !isValid) {
-        nameError.style.display = "block";
-        nameInput.style.borderColor = "#e74c3c";
-      } else {
-        nameError.style.display = "none";
-        nameInput.style.borderColor = "";
-      }
-    });
+    // Wire Randomize Color button to this racer id
+    const randomizeBtn = document.getElementById("editDialogRandomizeColor");
+    if (randomizeBtn) {
+      randomizeBtn.onclick = () => this.randomizeRacerColor(id);
+    }
 
-    // Form submission handler
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const name = nameInput.value.trim();
+    // Real-time validation (overwrite previous handlers to avoid duplicates)
+    if (nameInput) {
+      nameInput.oninput = () => {
+        const value = nameInput.value;
+        const isValid = /^[A-Za-z0-9]{2,16}$/.test(value);
 
-      if (!name) {
-        nameError.textContent = "Name is required";
-        nameError.style.display = "block";
-        nameInput.style.borderColor = "#e74c3c";
-        nameInput.focus();
-        return;
-      }
+        if (value && !isValid) {
+          if (nameError) nameError.style.display = "block";
+          nameInput.style.borderColor = "#e74c3c";
+        } else {
+          if (nameError) nameError.style.display = "none";
+          nameInput.style.borderColor = "";
+        }
+      };
+    }
 
-      if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
-        nameError.textContent =
-          "Name must be 2-16 alphanumeric characters only";
-        nameError.style.display = "block";
-        nameInput.style.borderColor = "#e74c3c";
-        nameInput.focus();
-        return;
-      }
+    // Form submission handler (overwrite to avoid duplicate listeners)
+    if (form) {
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const name = nameInput ? nameInput.value.trim() : "";
 
-      this.updateRacerFromDialog(id);
-    });
+        if (!name) {
+          if (nameError) nameError.textContent = "Name is required";
+          if (nameError) nameError.style.display = "block";
+          if (nameInput) {
+            nameInput.style.borderColor = "#e74c3c";
+            nameInput.focus();
+          }
+          return;
+        }
 
-    document.getElementById("editDialogRacerName").focus();
+        if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
+          if (nameError)
+            nameError.textContent =
+              "Name must be 2-16 alphanumeric characters only";
+          if (nameError) nameError.style.display = "block";
+          if (nameInput) {
+            nameInput.style.borderColor = "#e74c3c";
+            nameInput.focus();
+          }
+          return;
+        }
+
+        this.updateRacerFromDialog(id);
+      };
+    }
+
+    // Focus and open the dialog
+    const nameField = document.getElementById("editDialogRacerName");
+    if (nameField) nameField.focus();
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.style.display = "block";
+    }
   }
 
   async updateRacerFromDialog(id) {
     const name = document.getElementById("editDialogRacerName").value.trim();
-    const dialog = document.querySelector(".racer-dialog");
+    const dialog = document.getElementById("editRacerDialog");
     const imageData = dialog ? dialog.uploadedImage : null;
     const isRankedModeRacer = dialog ? dialog.isRankedModeRacer : false;
     const isCustomRacer = dialog ? dialog.isCustomRacer : false;
@@ -1697,7 +1725,13 @@ class DuckRaceGame {
       const duckIndex = parseInt(racerId);
 
       if (duckIndex < 0 || duckIndex >= 5 || !this.ducks[duckIndex]) {
-        document.querySelector(".racer-dialog").remove();
+        const dlg = document.getElementById("editRacerDialog");
+        if (dlg && typeof dlg.close === "function") {
+          dlg.close();
+        } else {
+          const el = document.querySelector(".racer-dialog");
+          if (el) el.remove();
+        }
         return;
       }
 
@@ -1750,10 +1784,14 @@ class DuckRaceGame {
       // Handle ranked mode racer (update ducks array and duck data arrays)
       const duckIndex = this.ducks.findIndex((d) => String(d.id) === racerId);
 
-      console.log("duckIOndex", duckIndex);
-
       if (-1 === duckIndex) {
-        document.querySelector(".racer-dialog").remove();
+        const dlg = document.getElementById("editRacerDialog");
+        if (dlg && typeof dlg.close === "function") {
+          dlg.close();
+        } else {
+          const el = document.querySelector(".racer-dialog");
+          if (el) el.remove();
+        }
         return;
       }
 
@@ -1771,7 +1809,13 @@ class DuckRaceGame {
 
       console.log("Updated ranked mode racer:", name);
 
-      document.querySelector(".racer-dialog").remove();
+      const dlg = document.getElementById("editRacerDialog");
+      if (dlg && typeof dlg.close === "function") {
+        dlg.close();
+      } else {
+        const el = document.querySelector(".racer-dialog");
+        if (el) el.remove();
+      }
 
       return;
     }
@@ -1805,7 +1849,13 @@ class DuckRaceGame {
       }
     }
 
-    document.querySelector(".racer-dialog").remove();
+    const dlg = document.getElementById("editRacerDialog");
+    if (dlg && typeof dlg.close === "function") {
+      dlg.close();
+    } else {
+      const el = document.querySelector(".racer-dialog");
+      if (el) el.remove();
+    }
   }
 
   randomizeRacerColor(id) {
@@ -1828,9 +1878,9 @@ class DuckRaceGame {
       this.duckColors[duckIndex] = newColor;
 
       // Update the dialog background
-      const dialogContent = document.querySelector(
-        ".racer-dialog .dialog-content"
-      );
+      const dialogContent =
+        document.querySelector("#editRacerDialog .dialog-content") ||
+        document.querySelector(".racer-dialog .dialog-content");
       if (dialogContent) {
         dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
       }
@@ -1855,9 +1905,9 @@ class DuckRaceGame {
         this.customRacers[racerIndex].color = newColor;
 
         // Update the dialog background
-        const dialogContent = document.querySelector(
-          ".racer-dialog .dialog-content"
-        );
+        const dialogContent =
+          document.querySelector("#editRacerDialog .dialog-content") ||
+          document.querySelector(".racer-dialog .dialog-content");
         if (dialogContent) {
           dialogContent.style.background = `linear-gradient(to left, ${newColor}, rgba(255,255,255,0.9))`;
         }
