@@ -121,7 +121,7 @@ class DuckRaceGame {
             id: window.rankedRacerId,
             name: window.rankedRacerName,
             profile: window.rankedRacerProfilePicture || null,
-            color: "#FFD700", // Default gold color for ranked racer
+            color: window.rankedRacerColor || "#FFD700", // Default gold color for ranked racer
           },
         ];
         console.log("🏆 Using fallback single ranked racer:", participants[0]);
@@ -361,9 +361,6 @@ class DuckRaceGame {
           currentLeaderData.mt > 50 &&
           !this.ducks.some((d) => d.finished)
         ) {
-          console.log(
-            `REAL LEAD CHANGE: ${currentLeader.name} takes the lead! (progress: ${currentLeaderData.mt}m)`
-          );
           this.log(`🏆 ${currentLeader.name} takes the lead!`, "leader");
           this.previousLeaderId = currentLeaderData.i;
         }
@@ -872,7 +869,7 @@ class DuckRaceGame {
     if (this.isRankedMode()) {
       // Ranked mode: Use only ranked racer data
       this.duckNames = [window.rankedRacerName || "Ranked Duck"];
-      this.duckColors = ["#FFD700"]; // Gold color for ranked racer
+      this.duckColors = [window.rankedRacerColor || "#FFD700"]; // Gold color for ranked racer
       this.duckProfilePictures = [window.rankedRacerProfilePicture || null];
 
       this.initializeRankedDuck();
@@ -1042,7 +1039,7 @@ class DuckRaceGame {
     const racerName = window.rankedRacerName || "Ranked Duck";
     const racerId = window.rankedRacerId || 1;
     const racerProfile = window.rankedRacerProfilePicture || null;
-    const racerColor = "#FFD700"; // Gold color for ranked racer
+    const racerColor = window.rankedRacerColor || "#FFD700"; // Gold color for ranked racer
 
     // Calculate center lane position
     const bottomMargin = 50;
@@ -1744,6 +1741,7 @@ class DuckRaceGame {
             name: name,
             profilePicture: imageData,
             okey: window.okey,
+            color: color,
           }),
         });
       } catch (reason) {
@@ -1753,6 +1751,7 @@ class DuckRaceGame {
 
       window.localStorage.setItem("rankedRacerName", name);
       window.localStorage.setItem("rankedRacerProfilePicture", imageData);
+      window.localStorage.setItem("rankedRacerColor", color);
       this.setWindowRacerData();
     }
 
@@ -2075,12 +2074,12 @@ class DuckRaceGame {
     // For ranked mode with online race data, use the simulation from the API response
     if (this.isRankedMode() && this.onlineRaceData) {
       // Step 3: Use the simulation from the online race response
-      this.log("🎮 Using simulation from online ranked race...");
+      this.log("🚦 Starting online ranked race...");
 
       // Apply the online simulation results directly
       this.applySimulationResults(this.onlineRaceData);
 
-      this.log("✅ Online ranked race simulation loaded successfully!");
+      this.log("✅ Online ranked race loaded successfully!");
     } else {
       // Use local race simulator for casual mode or fallback
       this.log("🎮 Using local race simulator...");
@@ -2117,7 +2116,7 @@ class DuckRaceGame {
     // Disable race title editing during race
     this.raceTitleInput.disabled = true;
 
-    this.log("🏁 Race Started!");
+    this.log("🟩 Race Started!");
 
     // Play start sound
     this.playSound("start");
@@ -2948,11 +2947,16 @@ class DuckRaceGame {
       this.log("📊 Final Standings (Simulated):");
       this.simulationStandings.forEach((standing) => {
         let mmrChangeString = "";
-        if (this.onlineRaceData) {
+        if (this.onlineRaceData && this.onlineRaceData.mmrChanges) {
           const mmrEntry = this.onlineRaceData.mmrChanges.find(
             (m) => m.id === standing.id
           );
           mmrChangeString = ` (MMR: ${mmrEntry.oldValue} → ${mmrEntry.newValue})`;
+
+          if (mmrEntry.id === window.rankedRacerId) {
+            window.localStorage.setItem("rankedRacerMmr", mmrEntry.newValue);
+            window.rankedRacerMmr = mmrEntry.newValue;
+          }
         }
 
         this.log(
@@ -3452,6 +3456,7 @@ class DuckRaceGame {
     window.rankedRacerProfilePicture = window.localStorage.getItem(
       "rankedRacerProfilePicture"
     );
+    window.rankedRacerColor = window.localStorage.getItem("rankedRacerColor");
     window.rankedRacerMmr = window.localStorage.getItem("rankedRacerMmr");
     window.okey = window.localStorage.getItem("okey");
   }
