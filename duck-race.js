@@ -1913,7 +1913,7 @@ class DuckRaceGame {
   }
 
   async createOnlineRankedRace() {
-    const rankedRaceUrl = `https://waddle-waddle.vercel.app/api/v1/ranked-race?okey=${window.okey}&wrc=${window.rankedRacerId}`;
+    const rankedRaceUrl = `https://waddle-waddle.vercel.app/api/v1/ranked-race?okey=${window.okey}`;
     const corsProxyRankedRaceUrl = `https://corsproxy.io/?${encodeURIComponent(
       rankedRaceUrl
     )}`;
@@ -1921,14 +1921,20 @@ class DuckRaceGame {
     try {
       const response = await fetch(corsProxyRankedRaceUrl);
 
+      if (429 === response.status) {
+        console.info("Replaying response");
+        return await response.json();
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log("🏆 Online ranked race response:", data);
+      console.log("🎮 Online ranked race response:", data);
       return data;
     } catch (error) {
+      console.log(error.status);
       console.error("❌ Error creating online ranked race:", error);
       throw error;
     }
@@ -2361,7 +2367,7 @@ class DuckRaceGame {
         const nameColor = duck ? duck.color : "#fff";
         ctx.font = "bold 12px Arial";
         ctx.fillStyle = nameColor;
-        ctx.fillText(standing.name, listX + 30, y);
+        ctx.fillText(standing.name, listX + 20, y);
       });
     }
 
@@ -3630,7 +3636,7 @@ class DuckRaceGame {
       `It really comes down through all the years of hard work for these racers!`,
       `We are really witnessing the best of the best here!`,
       `World class racing from all these ducks!`,
-      `My master once told me, it's not about winning, it's about how you play the game.`,
+      `My master once told me, it's not about winning, it's about how you play the game!`,
       `These ducks are giving it their all!`,
       `You can really see the determination in ${duckName}'s eyes!`,
       `${duckName} is a true competitor!`,
