@@ -489,41 +489,33 @@
       const volumeBtn = document.getElementById("volumeBtn");
 
       function toggleVolume() {
-        isMuted = !isMuted;
-        localStorage.setItem("volumeMuted", isMuted);
-        backgroundMusic.muted = isMuted;
-        volumeBtn.textContent = isMuted ? "🔇" : "🔊";
-        volumeBtn.classList.toggle("muted", isMuted);
-
-        // Update settings mute button if it exists
-        const musicMuteBtn = document.getElementById("musicMuteBtn");
-        if (musicMuteBtn) {
-          musicMuteBtn.textContent = isMuted ? "🔇" : "🔊";
-          musicMuteBtn.classList.toggle("muted", isMuted);
-        }
-
-        const musicVolumeSlider = document.getElementById("musicVolumeSlider");
-        if (musicVolumeSlider) {
-          if (isMuted) {
-            // Mute: set slider to 0
-            musicVolumeSlider.value = 0;
-          } else {
-            // Unmute: restore to previous volume
-            musicVolumeSlider.value = Math.round(musicVolume * 100);
-            backgroundMusic.volume = musicVolume;
-          }
+        if (window.game && window.game.masterMuteToggle) {
+          window.game.masterMuteToggle();
+        } else {
+          // Fallback for when game isn't loaded yet
+          isMuted = !isMuted;
+          localStorage.setItem("volumeMuted", isMuted);
+          backgroundMusic.muted = isMuted;
+          volumeBtn.textContent = isMuted ? "🔇" : "🔊";
+          volumeBtn.classList.toggle("muted", isMuted);
         }
       }
 
       // Load music volume
       let musicVolume = parseFloat(localStorage.getItem("musicVolume")) || 0.3;
-      let previousVolume = musicVolume; // Track last non-zero volume for restore on unmute
 
-      // Initialize background music with saved state
+      // Initialize background music with saved state (volume will be handled by game)
       backgroundMusic.volume = musicVolume;
       backgroundMusic.muted = isMuted;
       volumeBtn.textContent = isMuted ? "🔇" : "🔊";
       volumeBtn.classList.toggle("muted", isMuted);
+
+      // Wait for game to load, then sync volume state
+      document.addEventListener("DOMContentLoaded", function () {
+        if (window.game && window.game.syncVolumeState) {
+          window.game.syncVolumeState();
+        }
+      });
 
       // Play music when race starts
       window.playBackgroundMusic = function () {
@@ -618,40 +610,35 @@
 
         window.speechSynthesis.getVoices();
 
-        // Music volume slider handler
+        // Music volume slider handler (delegate to game when loaded)
         const musicVolumeSlider = document.getElementById("musicVolumeSlider");
         if (musicVolumeSlider) {
           musicVolumeSlider.value = isMuted ? 0 : Math.round(musicVolume * 100);
           musicVolumeSlider.addEventListener("input", function (e) {
-            const newVolume = parseFloat(e.target.value) / 100;
-            if (isMuted && newVolume > 0) {
-              // If muted and sliding to >0, unmute
-              isMuted = false;
-              backgroundMusic.muted = false;
-              localStorage.setItem("volumeMuted", "false");
-
-              // Update buttons
-              volumeBtn.textContent = "🔊";
-              volumeBtn.classList.remove("muted");
-
-              const musicMuteBtn = document.getElementById("musicMuteBtn");
-              if (musicMuteBtn) {
-                musicMuteBtn.textContent = "🔊";
-                musicMuteBtn.classList.remove("muted");
-              }
+            if (window.game && window.game.onMusicVolumeChange) {
+              window.game.onMusicVolumeChange(parseFloat(e.target.value) / 100);
+            } else {
+              // Fallback
+              const newVolume = parseFloat(e.target.value) / 100;
+              backgroundMusic.volume = newVolume;
+              musicVolume = newVolume;
+              localStorage.setItem("musicVolume", newVolume);
             }
-            backgroundMusic.volume = newVolume;
-            musicVolume = newVolume;
-            localStorage.setItem("musicVolume", newVolume);
           });
         }
 
-        // Settings mute button init and sync
+        // Settings mute button init and sync (delegate to game when loaded)
         const musicMuteBtn = document.getElementById("musicMuteBtn");
         if (musicMuteBtn) {
           musicMuteBtn.textContent = isMuted ? "🔇" : "🔊";
           musicMuteBtn.classList.toggle("muted", isMuted);
-          musicMuteBtn.addEventListener("click", toggleVolume);
+          musicMuteBtn.addEventListener("click", function () {
+            if (window.game && window.game.masterMuteToggle) {
+              window.game.masterMuteToggle();
+            } else {
+              toggleVolume();
+            }
+          });
         }
       });
 

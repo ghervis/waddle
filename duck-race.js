@@ -760,11 +760,125 @@ class DuckRaceGame {
           discordWebhookUrl: "",
           speechMuted: false,
           voiceIndex: 0,
+          speechVolume: 0.5,
         };
+
+    // Load master volume settings
+    this.masterMuted = localStorage.getItem("volumeMuted") === "true";
+    this.musicVolume = parseFloat(localStorage.getItem("musicVolume")) || 0.3;
   }
 
   saveSettings() {
     localStorage.setItem("duckRaceSettings", JSON.stringify(this.settings));
+  }
+
+  saveMasterVolumeSettings() {
+    localStorage.setItem("volumeMuted", this.masterMuted);
+    localStorage.setItem("musicVolume", this.musicVolume);
+  }
+
+  // Sync volume state from global variables when game loads
+  syncVolumeState() {
+    const backgroundMusic = document.getElementById("backgroundMusic");
+    const volumeBtn = document.getElementById("volumeBtn");
+
+    if (backgroundMusic) {
+      backgroundMusic.volume = this.musicVolume;
+      backgroundMusic.muted = this.masterMuted;
+    }
+
+    if (volumeBtn) {
+      volumeBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      volumeBtn.classList.toggle("muted", this.masterMuted);
+    }
+
+    // Update settings dialog elements
+    const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+    const musicMuteBtn = document.getElementById("musicMuteBtn");
+
+    if (musicVolumeSlider) {
+      musicVolumeSlider.value = this.masterMuted
+        ? 0
+        : Math.round(this.musicVolume * 100);
+    }
+
+    if (musicMuteBtn) {
+      musicMuteBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      musicMuteBtn.classList.toggle("muted", this.masterMuted);
+    }
+
+    // Update speech mute button in settings
+    const speechMuteBtn = document.getElementById("speechMuteBtn");
+    if (speechMuteBtn) {
+      speechMuteBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      speechMuteBtn.classList.toggle("muted", this.masterMuted);
+    }
+
+    this.saveMasterVolumeSettings();
+  }
+
+  // Master mute toggle - controls all audio
+  masterMuteToggle() {
+    this.masterMuted = !this.masterMuted;
+    this.saveMasterVolumeSettings();
+
+    // Update background music
+    const backgroundMusic = document.getElementById("backgroundMusic");
+    if (backgroundMusic) {
+      backgroundMusic.muted = this.masterMuted;
+    }
+
+    // Update finish cheering
+    const finishCheering = document.getElementById("finishCheering");
+    if (finishCheering) {
+      finishCheering.muted = this.masterMuted;
+    }
+
+    // Update speech settings to match master mute
+    this.settings.speechMuted = this.masterMuted;
+
+    // Update UI elements
+    const volumeBtn = document.getElementById("volumeBtn");
+    if (volumeBtn) {
+      volumeBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      volumeBtn.classList.toggle("muted", this.masterMuted);
+    }
+
+    const musicMuteBtn = document.getElementById("musicMuteBtn");
+    if (musicMuteBtn) {
+      musicMuteBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      musicMuteBtn.classList.toggle("muted", this.masterMuted);
+    }
+
+    // Update speech mute button
+    const speechMuteBtn = document.getElementById("speechMuteBtn");
+    if (speechMuteBtn) {
+      speechMuteBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      speechMuteBtn.classList.toggle("muted", this.masterMuted);
+    }
+
+    // Update music volume slider display
+    const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+    if (musicVolumeSlider) {
+      musicVolumeSlider.value = this.masterMuted
+        ? 0
+        : Math.round(this.musicVolume * 100);
+    }
+  }
+
+  // Handle music volume changes from slider
+  onMusicVolumeChange(newVolume) {
+    if (this.masterMuted && newVolume > 0) {
+      // If muted and sliding to >0, unmute
+      this.masterMuteToggle();
+    }
+
+    this.musicVolume = newVolume;
+    const backgroundMusic = document.getElementById("backgroundMusic");
+    if (backgroundMusic) {
+      backgroundMusic.volume = newVolume;
+    }
+    this.saveMasterVolumeSettings();
   }
 
   cleanupDuplicateNames() {
@@ -1387,16 +1501,13 @@ class DuckRaceGame {
     // Populate voice select
     this.populateVoices();
 
-    // Set speech mute button state
+    // Set speech mute button state (now controlled by master mute)
     const speechMuteBtn = document.getElementById("speechMuteBtn");
     if (speechMuteBtn) {
-      speechMuteBtn.textContent = this.settings.speechMuted ? "🔇" : "🔊";
-      speechMuteBtn.classList.toggle("muted", this.settings.speechMuted);
+      speechMuteBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      speechMuteBtn.classList.toggle("muted", this.masterMuted);
       speechMuteBtn.onclick = () => {
-        this.settings.speechMuted = !this.settings.speechMuted;
-        this.saveSettings();
-        speechMuteBtn.textContent = this.settings.speechMuted ? "🔇" : "🔊";
-        speechMuteBtn.classList.toggle("muted", this.settings.speechMuted);
+        this.masterMuteToggle();
       };
     }
 
@@ -1425,6 +1536,23 @@ class DuckRaceGame {
           speechVolumeValue.textContent = speechVolumeSlider.value + "%";
         }
         this.saveSettings();
+      };
+    }
+
+    // Update music volume elements to reflect master state
+    const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+    if (musicVolumeSlider) {
+      musicVolumeSlider.value = this.masterMuted
+        ? 0
+        : Math.round(this.musicVolume * 100);
+    }
+
+    const musicMuteBtn = document.getElementById("musicMuteBtn");
+    if (musicMuteBtn) {
+      musicMuteBtn.textContent = this.masterMuted ? "🔇" : "🔊";
+      musicMuteBtn.classList.toggle("muted", this.masterMuted);
+      musicMuteBtn.onclick = () => {
+        this.masterMuteToggle();
       };
     }
 
@@ -3029,15 +3157,11 @@ class DuckRaceGame {
       window.stopBackgroundMusic();
     }
 
-    // Play finish cheering sound
+    // Play finish cheering sound (respects master mute)
     const finishCheeringAudio = document.getElementById("finishCheering");
     if (finishCheeringAudio) {
-      const bgMusic = document.getElementById("backgroundMusic");
-      const currentVolume = bgMusic ? (bgMusic.muted ? 0 : bgMusic.volume) : 1;
-      finishCheeringAudio.volume = currentVolume;
-      if (bgMusic && bgMusic.muted) {
-        finishCheeringAudio.muted = true;
-      }
+      finishCheeringAudio.volume = this.musicVolume;
+      finishCheeringAudio.muted = this.masterMuted;
       finishCheeringAudio.currentTime = 0;
       finishCheeringAudio
         .play()
@@ -3656,12 +3780,11 @@ class DuckRaceGame {
     speechSynthesisUtterance.voice =
       voices[this.settings.voiceIndex || 0] || voices[0];
 
-    // Sync volume with music volume, but mute if speech is muted
-    const bgMusic = document.getElementById("backgroundMusic");
-    const currentVolume = bgMusic ? (bgMusic.muted ? 0 : bgMusic.volume) : 1;
-    speechSynthesisUtterance.volume = this.settings.speechMuted
+    // Use master volume settings for speech
+    const effectiveVolume = this.masterMuted
       ? 0
       : this.settings.speechVolume || 0.5;
+    speechSynthesisUtterance.volume = effectiveVolume;
 
     return speechSynthesisUtterance;
   }
