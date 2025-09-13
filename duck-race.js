@@ -968,11 +968,20 @@ class DuckRaceGame {
   updateRacersList() {
     if (this.isRankedMode()) {
       // Ranked mode: Use only ranked racer data
-      this.duckNames = [window.rankedRacerName || "Ranked Duck"];
-      this.duckColors = [window.rankedRacerColor || "#FFD700"]; // Gold color for ranked racer
-      this.duckProfilePictures = [window.rankedRacerProfilePicture || null];
+      const racerConfigs = [
+        {
+          id: window.rankedRacerId || Date.now(),
+          name: window.rankedRacerName || "Ranked Duck",
+          color: window.rankedRacerColor || "#FFD700",
+          profilePicture: window.rankedRacerProfilePicture || null,
+        },
+      ];
 
-      this.initializeRankedDuck();
+      this.duckNames = racerConfigs.map((c) => c.name);
+      this.duckColors = racerConfigs.map((c) => c.color);
+      this.duckProfilePictures = racerConfigs.map((c) => c.profilePicture);
+
+      this.initializeDucks(racerConfigs);
       this.updateLeaderboard();
       this.draw();
       this.updateAddButtonVisibility();
@@ -980,54 +989,33 @@ class DuckRaceGame {
     }
 
     // Casual mode: Always show default racers, plus any custom racers
-    this.duckNames = [];
-    this.duckColors = [];
-    this.duckProfilePictures = [];
+    const racerConfigs = [];
 
-    // Always start with the 5 default racers in casual mode
-    const customRacers = [
-      {
-        name: this.customRacerNames[0] || "Duck1",
-        color: this.customRacerColors[0],
-        profilePicture: this.customRacerProfilePictures[0] || null,
-      },
-      {
-        name: this.customRacerNames[1] || "Duck2",
-        color: this.customRacerColors[1],
-        profilePicture: this.customRacerProfilePictures[1] || null,
-      },
-      {
-        name: this.customRacerNames[2] || "Duck3",
-        color: this.customRacerColors[2],
-        profilePicture: this.customRacerProfilePictures[2] || null,
-      },
-      {
-        name: this.customRacerNames[3] || "Duck4",
-        color: this.customRacerColors[3],
-        profilePicture: this.customRacerProfilePictures[3] || null,
-      },
-      {
-        name: this.customRacerNames[4] || "Duck5",
-        color: this.customRacerColors[4],
-        profilePicture: this.customRacerProfilePictures[4] || null,
-      },
-    ];
+    // Add the 5 default/customizable racers
+    for (let i = 0; i < 5; i++) {
+      racerConfigs.push({
+        id: i,
+        name: this.customRacerNames[i] || `Duck${i + 1}`,
+        color: this.customRacerColors[i],
+        profilePicture: this.customRacerProfilePictures[i] || null,
+      });
+    }
 
-    // Add default racers
-    customRacers.forEach((racer) => {
-      this.duckNames.push(racer.name);
-      this.duckColors.push(racer.color);
-      this.duckProfilePictures.push(racer.profilePicture);
+    // Add additional custom racers
+    this.customRacers.forEach((racer, customIndex) => {
+      racerConfigs.push({
+        id: 5 + customIndex,
+        name: racer.name,
+        color: racer.color,
+        profilePicture: racer.profilePicture || null,
+      });
     });
 
-    // Add custom racers (if any) after the default ones
-    this.customRacers.forEach((racer) => {
-      this.duckNames.push(racer.name);
-      this.duckColors.push(racer.color);
-      this.duckProfilePictures.push(racer.profilePicture || null);
-    });
+    this.duckNames = racerConfigs.map((c) => c.name);
+    this.duckColors = racerConfigs.map((c) => c.color);
+    this.duckProfilePictures = racerConfigs.map((c) => c.profilePicture);
 
-    this.initializeDucks();
+    this.initializeDucks(racerConfigs);
     this.updateLeaderboard();
 
     this.draw();
@@ -1067,32 +1055,25 @@ class DuckRaceGame {
       });
     }
   }
-  initializeDucks() {
+  initializeDucks(racerConfigs) {
+    console.log("initializeDucks");
     this.ducks = [];
-    const racerCount = Math.min(this.duckNames.length, this.maxRacers);
+    const racerCount = racerConfigs.length;
 
     // Reserve 50px from bottom for progress bar
     const bottomMargin = 50;
     const usableHeight = this.canvas.height - 80 - bottomMargin; // From top water area to progress bar
 
-    for (let i = 0; i < racerCount; i++) {
+    racerConfigs.forEach((config, i) => {
       // Calculate lane positioning - evenly distribute all racers across usable height
       const laneY =
         80 + (i * usableHeight) / racerCount + usableHeight / racerCount / 2;
 
-      // Get profile picture directly from customRacers to ensure accuracy
-      let profilePicture = null;
-      if (this.customRacers.length > 0 && i < this.customRacers.length) {
-        profilePicture = this.customRacers[i].profilePicture || null;
-      } else {
-        profilePicture = this.duckProfilePictures[i] || null;
-      }
-
       this.ducks.push({
-        id: i,
-        name: this.duckNames[i] || `Duck ${i + 1}`,
-        color: this.duckColors[i] || `hsl(${(i * 360) / racerCount}, 70%, 50%)`, // Generate colors if not enough
-        profilePicture: profilePicture, // Use directly fetched profile picture
+        id: config.id,
+        name: config.name || `Duck ${i + 1}`,
+        color: config.color || `hsl(${(i * 360) / racerCount}, 70%, 50%)`, // Generate colors if not enough
+        profilePicture: config.profilePicture || null,
         x: 50, // Start position
         y: laneY, // Calculated lane positioning
         speed: this.baseSpeed, // Same speed for all ducks
@@ -1133,74 +1114,7 @@ class DuckRaceGame {
         // Multipliers
         speedMultiplier: 1.0,
       });
-    }
-  }
-
-  initializeRankedDuck() {
-    // Use ranked racer data
-    const racerName = window.rankedRacerName || "Ranked Duck";
-    const racerId = window.rankedRacerId || 1;
-    const racerProfile = window.rankedRacerProfilePicture || null;
-    const racerColor = window.rankedRacerColor || "#FFD700"; // Gold color for ranked racer
-
-    // Calculate center lane position
-    const bottomMargin = 50;
-    const usableHeight = this.canvas.height - 80 - bottomMargin;
-    const centerY = 80 + usableHeight / 2;
-
-    // Create single ranked duck
-    this.ducks = [
-      {
-        id: racerId,
-        name: racerName,
-        color: racerColor,
-        profilePicture: racerProfile,
-        x: 50, // Start position
-        y: centerY, // Center lane
-        speed: this.baseSpeed,
-        baseSpeed: this.baseSpeed,
-        finished: false,
-        finishTime: 0,
-        position: 1,
-
-        // Smooth movement tracking
-        velocity: 0,
-        lastX: 50,
-        lastUpdateTime: Date.now(),
-
-        // Enhanced smooth speed tracking
-        currentVisualSpeed: 100,
-        lastSimulationPosition: 0,
-        lastSimulationTime: 0,
-        smoothVelocity: 0,
-
-        // Status effects
-        stunned: 0,
-        boosted: 0,
-        immune: 0,
-        leechAffected: 0,
-        magnetBoost: 0,
-        magnetMultiplier: 1.0,
-        splashBoost: 0,
-        splashMultiplier: 1.0,
-
-        // Skill display
-        skillText: "",
-        skillTextTimer: 0,
-        nextSkillTime: Date.now() + Math.random() * 5000 + 5000,
-
-        // Visual effects
-        effects: [],
-
-        // Multipliers
-        speedMultiplier: 1.0,
-      },
-    ];
-
-    // Update duck data arrays for consistency
-    this.duckNames = [racerName];
-    this.duckColors = [racerColor];
-    this.duckProfilePictures = [racerProfile];
+    });
   }
 
   setupEventListeners() {
@@ -2158,7 +2072,6 @@ class DuckRaceGame {
 
       // Ensure we have the latest racer data before initializing ducks
       this.updateRacersList();
-      this.initializeDucks();
     }
     this.clearLog();
 
@@ -2418,7 +2331,7 @@ class DuckRaceGame {
       ctx.fillStyle = "#fff";
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
-      ctx.fillText("Top 10 Finishers", listX, titleY);
+      ctx.fillText(endSummaryTitleText, listX, titleY);
 
       // Draw each finisher
       top10.forEach((standing, index) => {
@@ -3005,7 +2918,7 @@ class DuckRaceGame {
     }
 
     // Reset race state but keep racers visible
-    this.initializeDucks(); // Reinitialize ducks at starting positions
+    this.updateRacersList();
     this.cameraX = 0;
 
     // Update button text back to "Start Race"
@@ -3023,12 +2936,6 @@ class DuckRaceGame {
 
     // Re-enable race title editing
     this.raceTitleInput.disabled = false;
-
-    // Clear the canvas
-    this.draw();
-
-    // Update leaderboard to show normal view
-    this.updateLeaderboard();
 
     // Clear log
     this.clearLog();
