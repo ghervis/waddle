@@ -96,7 +96,7 @@ class DuckRaceGame {
       return false;
     }
 
-    console.log("🦆 Race simulator loaded successfully!", window.simulateRace);
+    console.log("🦆 Race simulator loaded successfully!");
 
     let participants;
     let raceMode;
@@ -755,6 +755,8 @@ class DuckRaceGame {
       ? JSON.parse(saved)
       : {
           discordWebhookUrl: "",
+          speechMuted: false,
+          voiceIndex: 0,
         };
   }
 
@@ -1336,6 +1338,26 @@ class DuckRaceGame {
     reader.readAsDataURL(file);
   }
 
+  populateVoices() {
+    const select = document.getElementById("voiceSelect");
+    if (!select) return;
+
+    select.innerHTML = "";
+    const voices = speechSynthesis
+      .getVoices()
+      .filter((voice) => voice.lang.startsWith("en-US"));
+    voices.forEach((voice, i) => {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = voice.name + (voice.default ? " (default)" : "");
+      select.add(opt);
+    });
+
+    if (voices.length > 0) {
+      select.value = this.settings.voiceIndex || 0;
+    }
+  }
+
   openSettingsDialog() {
     const dialog = document.getElementById("settingsDialog");
     if (!dialog) {
@@ -1358,6 +1380,50 @@ class DuckRaceGame {
     if (input) {
       input.value = this.settings.discordWebhookUrl || "";
       input.focus();
+    }
+
+    // Populate voice select
+    this.populateVoices();
+
+    // Set speech mute button state
+    const speechMuteBtn = document.getElementById("speechMuteBtn");
+    if (speechMuteBtn) {
+      speechMuteBtn.textContent = this.settings.speechMuted ? "🔇" : "🔊";
+      speechMuteBtn.classList.toggle("muted", this.settings.speechMuted);
+      speechMuteBtn.onclick = () => {
+        this.settings.speechMuted = !this.settings.speechMuted;
+        this.saveSettings();
+        speechMuteBtn.textContent = this.settings.speechMuted ? "🔇" : "🔊";
+        speechMuteBtn.classList.toggle("muted", this.settings.speechMuted);
+      };
+    }
+
+    // Voice select onchange
+    const voiceSelect = document.getElementById("voiceSelect");
+    if (voiceSelect) {
+      voiceSelect.onchange = () => {
+        this.settings.voiceIndex = parseInt(voiceSelect.value);
+        this.saveSettings();
+      };
+    }
+
+    // Voice volume slider
+    const speechVolumeSlider = document.getElementById("speechVolumeSlider");
+    if (speechVolumeSlider) {
+      speechVolumeSlider.value = Math.round(
+        (this.settings.speechVolume || 0.5) * 100
+      );
+      const speechVolumeValue = document.getElementById("speechVolumeValue");
+      if (speechVolumeValue) {
+        speechVolumeValue.textContent = speechVolumeSlider.value + "%";
+      }
+      speechVolumeSlider.oninput = () => {
+        this.settings.speechVolume = parseFloat(speechVolumeSlider.value) / 100;
+        if (speechVolumeValue) {
+          speechVolumeValue.textContent = speechVolumeSlider.value + "%";
+        }
+        this.saveSettings();
+      };
     }
 
     if (typeof dialog.showModal === "function") {
@@ -2972,6 +3038,12 @@ class DuckRaceGame {
     // Play finish cheering sound
     const finishCheeringAudio = document.getElementById("finishCheering");
     if (finishCheeringAudio) {
+      const bgMusic = document.getElementById("backgroundMusic");
+      const currentVolume = bgMusic ? (bgMusic.muted ? 0 : bgMusic.volume) : 1;
+      finishCheeringAudio.volume = currentVolume;
+      if (bgMusic && bgMusic.muted) {
+        finishCheeringAudio.muted = true;
+      }
       finishCheeringAudio.currentTime = 0;
       finishCheeringAudio
         .play()
@@ -3586,8 +3658,16 @@ class DuckRaceGame {
 
     const voices = speechSynthesis
       .getVoices()
-      .filter((voice) => voice.lang === "en-US");
-    speechSynthesisUtterance.voice = voices[0];
+      .filter((voice) => voice.lang.startsWith("en-US"));
+    speechSynthesisUtterance.voice =
+      voices[this.settings.voiceIndex || 0] || voices[0];
+
+    // Sync volume with music volume, but mute if speech is muted
+    const bgMusic = document.getElementById("backgroundMusic");
+    const currentVolume = bgMusic ? (bgMusic.muted ? 0 : bgMusic.volume) : 1;
+    speechSynthesisUtterance.volume = this.settings.speechMuted
+      ? 0
+      : this.settings.speechVolume || 0.5;
 
     return speechSynthesisUtterance;
   }

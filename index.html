@@ -185,8 +185,13 @@
           </div>
 
           <div class="settings-section music">
-            <h4>🎵 Music Volume</h4>
+            <h4>🎵 Audio</h4>
             <p>Control the volume of background music during races</p>
+            <label
+              for="musicVolumeSlider"
+              style="display: block; margin-bottom: 5px; font-weight: bold"
+              >Volume:</label
+            >
             <div
               style="
                 display: flex;
@@ -219,6 +224,62 @@
                 🔊
               </button>
             </div>
+
+            <label
+              for="voiceSelect"
+              style="display: block; margin: 15px 0 5px 0; font-weight: bold"
+              >Voice:</label
+            >
+            <select
+              id="voiceSelect"
+              style="
+                width: 100%;
+                padding: 8px;
+                margin-bottom: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+              "
+            ></select>
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 10px;
+              "
+            >
+              <span style="font-weight: bold">Announcer Mute:</span>
+              <button
+                id="speechMuteBtn"
+                class="mute-btn"
+                style="
+                  width: 40px;
+                  height: 40px;
+                  border-radius: 50%;
+                  border: none;
+                  background: #ddd;
+                  cursor: pointer;
+                  font-size: 18px;
+                "
+              >
+                🔊
+              </button>
+            </div>
+
+            <label
+              for="speechVolumeSlider"
+              style="display: block; margin: 15px 0 5px 0; font-weight: bold"
+              >Voice Volume:</label
+            >
+            <input
+              type="range"
+              id="speechVolumeSlider"
+              min="0"
+              max="100"
+              value="50"
+              style="width: 100%; padding: 8px; margin-bottom: 10px"
+            />
           </div>
 
           <div class="settings-section export">
@@ -554,6 +615,8 @@
             }
           });
         });
+
+        window.speechSynthesis.getVoices();
 
         // Music volume slider handler
         const musicVolumeSlider = document.getElementById("musicVolumeSlider");
