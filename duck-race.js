@@ -2003,6 +2003,10 @@ class DuckRaceGame {
           // Multipliers
           speedMultiplier: 1.0,
         });
+
+        if (this.isRankedMode() && window.rankedRacerId === racer.id) {
+          this.updateLocalData(racer.name, racer.color);
+        }
       });
 
     // Update duck data arrays for consistency
@@ -2019,6 +2023,17 @@ class DuckRaceGame {
       this.ducks.map((d) => ({ id: d.id, name: d.name }))
     );
     return true;
+  }
+
+  updateLocalData(name, color) {
+    if (name) {
+      window.localStorage.setItem("rankedRacerName", name);
+      window.rankedRacerName = name;
+    }
+    if (color) {
+      window.localStorage.setItem("rankedRacerColor", color);
+      window.rankedRacerColor = color;
+    }
   }
 
   async startRace() {
@@ -3654,6 +3669,7 @@ window.importProfile = async () => {
       jsonResponse.profilePicture || ""
     );
     window.localStorage.setItem("okey", okeyValue);
+    window.localStorage.setItem("rankedRacerColor", jsonResponse.color || "");
     window.location.hash = "";
   } catch (e) {
     console.error("Error fetching profile with OKEY from URL:", e);
