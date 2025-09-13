@@ -2069,9 +2069,6 @@ class DuckRaceGame {
         alert("Cannot start race! Please add at least one racer.");
         return;
       }
-
-      // Ensure we have the latest racer data before initializing ducks
-      this.updateRacersList();
     }
     this.clearLog();
 
@@ -2918,8 +2915,8 @@ class DuckRaceGame {
     }
 
     // Reset race state but keep racers visible
-    this.updateRacersList();
     this.cameraX = 0;
+    this.updateRacersList();
 
     // Update button text back to "Start Race"
     const startBtn = document.getElementById("startBtn");
@@ -3386,7 +3383,7 @@ class DuckRaceGame {
     }
   }
 
-  generateRankedRacerId() {
+  async generateRankedRacerId() {
     // Disable start button while generating ranked racer ID
     this.toggleStartBtn(false);
 
@@ -3404,22 +3401,23 @@ class DuckRaceGame {
     const corsProxyGenerateProfileUrl = `https://corsproxy.io/?${encodeURIComponent(
       generateProfileUrl
     )}`;
-    fetch(corsProxyGenerateProfileUrl)
-      .then((response) => response.json())
-      .then((data) => {
-        window.localStorage.setItem("rankedRacerId", data.id);
-        window.localStorage.setItem("rankedRacerName", data.name);
-        window.localStorage.setItem(
-          "rankedRacerProfilePicture",
-          data.profilePicture || ""
-        );
-        window.localStorage.setItem("rankedRacerMmr", data.mmr || 0);
-        this.setWindowRacerData();
-        this.toggleStartBtn(true);
-      })
-      .catch((error) => {
-        console.error("Error racer id:", error);
-      });
+
+    try {
+      const response = await fetch(corsProxyGenerateProfileUrl);
+      const data = await response.json();
+      window.localStorage.setItem("rankedRacerId", data.id);
+      window.localStorage.setItem("rankedRacerName", data.name);
+      window.localStorage.setItem(
+        "rankedRacerProfilePicture",
+        data.profilePicture || ""
+      );
+      window.localStorage.setItem("rankedRacerMmr", data.mmr || 0);
+      this.setWindowRacerData();
+    } catch (error) {
+      console.error("Error generating racer ID:", error);
+    } finally {
+      this.toggleStartBtn(true);
+    }
   }
 
   async fetchOnlineLeaderboard() {
