@@ -1391,6 +1391,27 @@ input[type="color"].color-picker {
   background: rgba(255, 215, 0, 0.1);
 }
 
+.settings-section.music > label,
+.settings-section.music .volume-label {
+  display: none;
+}
+
+.settings-section.music .volume-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-section.music input[type="range"] {
+  flex: 1;
+  margin: 0;
+}
+
+.settings-section.music .mute-btn {
+  order: 2;
+  margin-left: 10px;
+}
+
 .settings-section.music h4 {
   color: #ffd700;
 }
@@ -1420,6 +1441,7 @@ input[type="range"] {
   border-radius: 3px;
   background: #ddd;
   outline: none;
+  margin: 10px 0;
 }
 
 input[type="range"]::-webkit-slider-thumb {

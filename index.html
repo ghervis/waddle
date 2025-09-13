@@ -186,11 +186,10 @@
 
           <div class="settings-section music">
             <h4>🎵 Audio</h4>
-            <p>Control the volume of background music during races</p>
             <label
               for="musicVolumeSlider"
               style="display: block; margin-bottom: 5px; font-weight: bold"
-              >Volume:</label
+              >Music Volume:</label
             >
             <div
               style="
@@ -241,6 +240,11 @@
               "
             ></select>
 
+            <label
+              for="speechVolumeSlider"
+              style="display: block; margin: 15px 0 5px 0; font-weight: bold"
+              >Voice Volume:</label
+            >
             <div
               style="
                 display: flex;
@@ -249,7 +253,14 @@
                 margin-top: 10px;
               "
             >
-              <span style="font-weight: bold">Announcer Mute:</span>
+              <input
+                type="range"
+                id="speechVolumeSlider"
+                min="0"
+                max="100"
+                value="50"
+                style="flex: 1; margin: 0"
+              />
               <button
                 id="speechMuteBtn"
                 class="mute-btn"
@@ -266,20 +277,6 @@
                 🔊
               </button>
             </div>
-
-            <label
-              for="speechVolumeSlider"
-              style="display: block; margin: 15px 0 5px 0; font-weight: bold"
-              >Voice Volume:</label
-            >
-            <input
-              type="range"
-              id="speechVolumeSlider"
-              min="0"
-              max="100"
-              value="50"
-              style="width: 100%; padding: 8px; margin-bottom: 10px"
-            />
           </div>
 
           <div class="settings-section export">
