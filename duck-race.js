@@ -652,8 +652,11 @@ class DuckRaceGame {
         if (1 === finisher.position) {
           clearTimeout(this.randomRemarkTimeout);
           setTimeout(
-            () => this.speakImmediately(`${finisher.name}, wins the race`),
-            500
+            () =>
+              this.speakImmediately(
+                `${this.simulationStandings[0].name} wins the race!`
+              ),
+            1000
           );
         }
       }
@@ -1058,7 +1061,6 @@ class DuckRaceGame {
     }
   }
   initializeDucks(racerConfigs) {
-    console.log("initializeDucks");
     this.ducks = [];
     const racerCount = racerConfigs.length;
 
@@ -1884,8 +1886,6 @@ class DuckRaceGame {
       this.updateLeaderboard();
       this.draw();
 
-      console.log("Updated custom racer:", uniqueName);
-
       const dlg2 = document.getElementById("editRacerDialog");
       if (dlg2 && typeof dlg2.close === "function") {
         dlg2.close();
@@ -1924,8 +1924,6 @@ class DuckRaceGame {
       // Update the leaderboard to reflect changes
       this.updateLeaderboard();
       this.draw();
-
-      console.log("Updated ranked mode racer:", name);
 
       const dlg = document.getElementById("editRacerDialog");
       if (dlg && typeof dlg.close === "function") {
@@ -2887,7 +2885,7 @@ class DuckRaceGame {
     const nameTagWidth = Math.max(textWidth + paddingX, 70); // Minimum width of 70px
 
     this.ctx.fillRect(
-      screenX - 25 - Math.max(0, (nameTagWidth - 70) / 2),
+      screenX - 25 - Math.max(0, nameTagWidth - 70),
       screenY + 20,
       nameTagWidth,
       18
@@ -2898,8 +2896,8 @@ class DuckRaceGame {
         ? "#FFD700"
         : "#FFFFFF";
     this.ctx.font = "bold 12px Arial";
-    this.ctx.textAlign = "center";
-    this.ctx.fillText(duck.name, screenX + 10, screenY + 32);
+    this.ctx.textAlign = "right";
+    this.ctx.fillText(duck.name, screenX + 36, screenY + 32);
     this.ctx.textAlign = "left"; // Reset alignment
 
     // Draw position (bigger) - moved to right of the name tag
@@ -2907,11 +2905,7 @@ class DuckRaceGame {
     if (this.raceActive) {
       this.ctx.fillStyle = "#fff";
       this.ctx.font = "bold 12px Arial";
-      this.ctx.fillText(
-        `#${duck.position}`,
-        screenX + 50 + Math.max(0, (nameTagWidth - 70) / 2),
-        screenY + 32
-      );
+      this.ctx.fillText(`#${duck.position}`, screenX + 50, screenY + 32);
 
       // Draw single status effect emoji closer to position
       let statusX = screenX + 65; // Start closer to position number
@@ -3673,7 +3667,7 @@ class DuckRaceGame {
   }
 
   takesTheLead(duckName) {
-    if (!this.raceActive) {
+    if (this.ducks.some((d) => d.finished)) {
       return;
     }
 
@@ -3697,11 +3691,11 @@ class DuckRaceGame {
     clearTimeout(this.randomRemarkTimeout);
     this.speakImmediately(randomTakesTheLead);
 
-    Math.floor(Math.random() * 4) > 0 && this.randomRemark(duckName);
+    this.randomRemark(duckName);
   }
 
   randomRemark(duckName) {
-    if (!this.raceActive) {
+    if (this.ducks.some((d) => d.finished)) {
       return;
     }
 
@@ -3729,7 +3723,7 @@ class DuckRaceGame {
 
     this.randomRemarkTimeout = setTimeout(() => {
       this.speakImmediately(randomRemark);
-    }, 3000);
+    }, 3500);
   }
 }
 
