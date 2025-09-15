@@ -3617,7 +3617,7 @@ class DuckRaceGame {
       const gradientStyle = `background: linear-gradient(to left, ${racerColor}, transparent);`;
       entry.style.cssText = gradientStyle;
 
-      // Only show edit/remove buttons for racers owned by the current user
+      // Show edit button for all racers in casual mode
       const editButton = !this.isRankedMode()
         ? `<button onclick="window.game.editRacer('${racerId}')" class="edit-btn-small">✏️</button>`
         : "";
