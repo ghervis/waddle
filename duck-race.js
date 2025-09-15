@@ -79,9 +79,253 @@ class DuckRaceGame {
 
     this.updateRacersList();
     this.updateAddButtonVisibility();
+    this.initializeRankedProfileButton();
     this.draw();
     this.generateBackgroundElements();
     this.setupEventListeners();
+  }
+
+  initializeRankedProfileButton() {
+    const profileBtn = document.getElementById("rankedProfileBtn");
+    if (!profileBtn) return;
+
+    // Initially hidden
+    profileBtn.style.display = "none";
+
+    // Add click handler
+    profileBtn.addEventListener("click", () => {
+      if (window.rankedRacerId) {
+        this.editRacer(window.rankedRacerId);
+      } else {
+        console.warn("Ranked racer ID not available");
+      }
+    });
+
+    // Update visibility and content when mode changes (handled in updateRankedProfileButton)
+    this.updateRankedProfileButton();
+  }
+
+  updateRankedProfileButton() {
+    const profileBtn = document.getElementById("rankedProfileBtn");
+    const profileCircle = profileBtn
+      ? profileBtn.querySelector(".ranked-profile-circle")
+      : null;
+    if (!profileBtn || !profileCircle) return;
+
+    if (this.isRankedMode() && window.rankedRacerId) {
+      // Show button in ranked mode
+      profileBtn.style.display = "flex";
+
+      const racerName = window.rankedRacerName || "Racer";
+      const racerColor = window.rankedRacerColor || "#FFD700";
+      const profilePicture = window.rankedRacerProfilePicture || "";
+
+      // Set border color
+      profileCircle.style.borderColor = racerColor;
+
+      // Set content: picture or initials
+      if (profilePicture && profilePicture.trim() !== "") {
+        profileCircle.style.backgroundImage = `url('${profilePicture}')`;
+        profileCircle.classList.add("with-picture");
+        profileCircle.textContent = ""; // Clear initials
+      } else {
+        profileCircle.style.backgroundImage = "none";
+        profileCircle.classList.remove("with-picture");
+        profileCircle.style.backgroundColor = racerColor;
+        profileCircle.textContent = racerName.charAt(0).toUpperCase();
+      }
+    } else {
+      // Hide in casual mode or if no racer data
+      profileBtn.style.display = "none";
+    }
+  }
+
+  // Override the existing editRacer method to handle giant button for ranked racer
+  editRacer(id) {
+    // Convert id to string for comparison
+    const racerId = String(id);
+
+    // First try to find in customRacers (casual mode custom racers)
+    let racer = this.customRacers.find((r) => String(r.id) === racerId);
+    let isRankedModeRacer = false;
+    let isCustomRacer = false;
+
+    // If not found in customRacers, check if it's a default racer in casual mode
+    if (!racer && !this.isRankedMode()) {
+      // In casual mode, check if this is a default racer (ID 0-4)
+      const duckIndex = parseInt(racerId);
+      if (
+        duckIndex >= 0 &&
+        duckIndex < 5 &&
+        this.ducks &&
+        this.ducks[duckIndex]
+      ) {
+        const duck = this.ducks[duckIndex];
+        racer = {
+          id: duck.id,
+          name: duck.name,
+          color: duck.color,
+          profilePicture: duck.profilePicture,
+        };
+        isCustomRacer = true;
+      }
+    }
+
+    // If still not found, try to find in ducks array (ranked mode)
+    if (!racer && this.ducks) {
+      const duck = this.ducks.find((d) => String(d.id) === racerId);
+      if (duck) {
+        racer = {
+          id: duck.id,
+          name: duck.name,
+          color: duck.color,
+          profilePicture: duck.profilePicture,
+        };
+        isRankedModeRacer = true;
+      }
+    }
+
+    if (!racer) {
+      console.error("Racer not found:", racerId);
+      return;
+    }
+
+    // Ensure Add dialog is closed if it is open
+    const addDlg = document.getElementById("addRacerDialog");
+    if (addDlg) {
+      if (typeof addDlg.close === "function") {
+        addDlg.close();
+      } else {
+        addDlg.style.display = "none";
+      }
+    }
+
+    const dialog = document.getElementById("editRacerDialog");
+    if (!dialog) {
+      console.error("Edit racer dialog element not found in DOM");
+      return;
+    }
+
+    // Persist state on dialog element
+    dialog.uploadedImage = racer.profilePicture; // Start with existing image
+    dialog.isRankedModeRacer = isRankedModeRacer; // Store for later use
+    dialog.isCustomRacer = isCustomRacer; // Store for later use
+
+    // Update title with mode suffix
+    const titleEl = document.getElementById("editRacerTitle");
+    if (titleEl) {
+      if (isRankedModeRacer) {
+        titleEl.textContent = "Edit Your Profile";
+      } else {
+        titleEl.textContent = `Edit Racer${isCustomRacer ? " (Casual)" : ""}`;
+      }
+    }
+
+    // Set initial color picker value
+    const colorPicker = document.getElementById("editDialogColorPicker");
+    if (colorPicker) {
+      colorPicker.value = racer.color;
+    }
+
+    // Add event listener for color picker if not already added
+    if (colorPicker && !colorPicker.dataset.listenerAdded) {
+      colorPicker.onchange = (e) => {
+        const selectedColor = e.target.value;
+        dialog.currentColor = selectedColor;
+      };
+      colorPicker.dataset.listenerAdded = "true";
+    }
+
+    // Populate form fields
+    const form = document.getElementById("editRacerForm");
+    const nameInput = document.getElementById("editDialogRacerName");
+    const nameError = document.getElementById("nameError");
+    if (nameInput) {
+      nameInput.value = racer.name || "";
+      nameInput.style.borderColor = "";
+    }
+    if (nameError) {
+      nameError.style.display = "none";
+      nameError.textContent = "Name must be 2-16 alphanumeric characters only";
+    }
+
+    // Set image preview
+    const preview = document.getElementById("editDialogImagePreview");
+    if (preview) {
+      preview.innerHTML =
+        racer.profilePicture && racer.profilePicture.trim() !== ""
+          ? `<img src="${racer.profilePicture}" class="preview-image" alt="Current" />`
+          : "";
+    }
+
+    // Real-time validation (overwrite previous handlers to avoid duplicates)
+    if (nameInput) {
+      nameInput.oninput = () => {
+        const value = nameInput.value;
+        const isValid = /^[A-Za-z0-9]{2,16}$/.test(value);
+
+        if (value && !isValid) {
+          if (nameError) nameError.style.display = "block";
+          nameInput.style.borderColor = "#e74c3c";
+        } else {
+          if (nameError) nameError.style.display = "none";
+          nameInput.style.borderColor = "";
+        }
+      };
+    }
+
+    // Form submission handler (overwrite to avoid duplicate listeners)
+    if (form) {
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const name = nameInput ? nameInput.value.trim() : "";
+
+        if (!name) {
+          if (nameError) nameError.textContent = "Name is required";
+          if (nameError) nameError.style.display = "block";
+          if (nameInput) {
+            nameInput.style.borderColor = "#e74c3c";
+            nameInput.focus();
+          }
+          return;
+        }
+
+        if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
+          if (nameError)
+            nameError.textContent =
+              "Name must be 2-16 alphanumeric characters only";
+          if (nameError) nameError.style.display = "block";
+          if (nameInput) {
+            nameInput.style.borderColor = "#e74c3c";
+            nameInput.focus();
+          }
+          return;
+        }
+
+        this.updateRacerFromDialog(id);
+      };
+    }
+
+    // Update submit button styling for ranked racer
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      if (isRankedModeRacer) {
+        submitBtn.classList.add("giant-update-btn");
+        submitBtn.textContent = "Update Profile";
+      } else {
+        submitBtn.classList.remove("giant-update-btn");
+        submitBtn.textContent = "Update Duck";
+      }
+    }
+
+    // Focus and open the dialog
+    const nameField = document.getElementById("editDialogRacerName");
+    if (nameField) nameField.focus();
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.style.display = "block";
+    }
   }
 
   // Use race simulator for more accurate race simulation - MANDATORY
@@ -1273,6 +1517,19 @@ class DuckRaceGame {
         this.ensureGameContinues();
       }
     });
+
+    // Listen for race mode changes to update profile button
+    const raceModeToggle = document.getElementById("raceModeToggle");
+    if (raceModeToggle) {
+      raceModeToggle.addEventListener("change", () => {
+        // Small delay to ensure game object is ready
+        setTimeout(() => {
+          if (window.game) {
+            window.game.updateRankedProfileButton();
+          }
+        }, 100);
+      });
+    }
   }
 
   ensureGameContinues() {
@@ -3354,9 +3611,6 @@ class DuckRaceGame {
         racerId = index;
       }
       let profilePicture = duck.profilePicture || null;
-      let isOwnedByUser = this.isRankedMode()
-        ? duck.id === window.rankedRacerId
-        : true; // Default to true for non-ranked mode
 
       // Add gradient background style
       const racerColor = this.duckColors[index];
@@ -3364,11 +3618,9 @@ class DuckRaceGame {
       entry.style.cssText = gradientStyle;
 
       // Only show edit/remove buttons for racers owned by the current user
-      const editButton = isOwnedByUser
+      const editButton = !this.isRankedMode()
         ? `<button onclick="window.game.editRacer('${racerId}')" class="edit-btn-small">✏️</button>`
         : "";
-
-      console.debug("editButton", editButton);
 
       // Show remove button for all racers in casual mode
       const removeButton = !this.isRankedMode()
@@ -3747,6 +3999,13 @@ class DuckRaceGame {
   isRankedMode() {
     const raceModeToggle = document.getElementById("raceModeToggle");
     return raceModeToggle && raceModeToggle.checked;
+  }
+
+  // Update profile button when racer data changes (e.g., after editing)
+  onRacerDataUpdated() {
+    if (this.isRankedMode()) {
+      this.updateRankedProfileButton();
+    }
   }
 
   updateAddButtonVisibility() {
