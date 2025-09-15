@@ -895,7 +895,7 @@ class DuckRaceGame {
         this.log(`🏁 ${finisher.name} finished the race!`);
         if (1 === finisher.position) {
           clearTimeout(this.randomRemarkTimeout);
-          setTimeout(
+          this.randomRemarkTimeout = setTimeout(
             () =>
               this.speakImmediately(
                 `${this.simulationStandings[0].name} wins the race!`
@@ -2783,8 +2783,8 @@ class DuckRaceGame {
     if (this.simulationStandings) {
       const top10 = this.simulationStandings.slice(0, 10);
       const startY = 100;
-      const lineHeight = 18;
-      const listX = 550; // Right side start
+      const lineHeight = 22;
+      const listX = 600; // Right side start
       const titleY = 70;
 
       let endSummaryTitleText = "Congratulations";
@@ -2794,7 +2794,7 @@ class DuckRaceGame {
       }
 
       // Title
-      ctx.font = "bold 16px Arial";
+      ctx.font = "bold 18px Arial";
       ctx.fillStyle = "#fff";
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
@@ -2807,14 +2807,14 @@ class DuckRaceGame {
         let positionText = pos.toString();
 
         // Position
-        ctx.font = "normal 12px Arial";
+        ctx.font = "normal 18px Arial";
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText(positionText, listX, y);
 
         // Name (find duck for color)
         const duck = this.ducks.find((d) => d.id === standing.id);
         const nameColor = duck ? duck.color : "#fff";
-        ctx.font = "bold 12px Arial";
+        ctx.font = "bold 18px Arial";
         ctx.fillStyle = nameColor;
         ctx.fillText(standing.name, listX + 20, y);
       });
