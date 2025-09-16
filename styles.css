@@ -98,6 +98,7 @@ body:before {
   background: white;
   color: #27ae60;
   border-color: #27ae60;
+  min-width: unset;
 }
 
 .start-btn {
