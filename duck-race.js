@@ -2733,7 +2733,7 @@ class DuckRaceGame {
       const top10 = this.simulationStandings.slice(0, 10);
       const startY = 100;
       const lineHeight = 22;
-      const listX = 600; // Right side start
+      const listX = 580; // Right side start
       const titleY = 70;
 
       let endSummaryTitleText = "Congratulations";
