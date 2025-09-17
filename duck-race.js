@@ -3560,16 +3560,6 @@ class DuckRaceGame {
       const gradientStyle = `background: linear-gradient(to left, ${racerColor}, transparent);`;
       entry.style.cssText = gradientStyle;
 
-      // Show edit button for all racers in casual mode
-      const editButton = !this.isRankedMode()
-        ? `<button onclick="window.game.editRacer('${racerId}')" class="edit-btn-small">✏️</button>`
-        : "";
-
-      // Show remove button for all racers in casual mode
-      const removeButton = !this.isRankedMode()
-        ? `<button onclick="window.game.removeRacer('${racerId}')" class="remove-btn-small">✖</button>`
-        : "";
-
       // Create racer circle content
       let racerCircleContent;
       if (profilePicture && profilePicture.trim() !== "") {
@@ -3586,10 +3576,6 @@ class DuckRaceGame {
           <div class="duck-info">
             ${racerCircleContent}
             <div class="duck-name">${name}</div>
-          </div>
-          <div class="racer-buttons">
-            ${editButton}
-            ${removeButton}
           </div>
         `;
 
@@ -3639,8 +3625,6 @@ class DuckRaceGame {
           <div class="duck-info">
             ${racerCircleContent}
             <div class="duck-name">${duck.name}</div>
-          </div>
-          <div class="racer-buttons">
             <span style="color: #fff; font-weight: bold; font-size: 14px;">#${position}</span>
           </div>
         `;

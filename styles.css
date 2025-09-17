@@ -292,10 +292,6 @@ body:before {
   display: none;
 }
 
-.sidebar.collapsed .racer-config .racer-buttons {
-  display: none;
-}
-
 .sidebar.collapsed .racer-circle {
   width: 35px !important;
   height: 35px !important;
@@ -523,11 +519,6 @@ canvas {
   font-size: 13px;
 }
 
-.racer-buttons {
-  display: flex;
-  gap: 5px;
-}
-
 .skill-info {
   font-size: 10px;
   color: #666;
@@ -552,39 +543,6 @@ canvas {
 
 .remove-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.remove-btn-small {
-  background: linear-gradient(45deg, #ff4757, #c44569);
-  border: none;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 10px;
-  margin-left: 5px;
-  transition: transform 0.2s;
-}
-
-.remove-btn-small:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.edit-btn-small {
-  background: linear-gradient(45deg, #3498db, #2980b9);
-  border: none;
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 10px;
-  transition: transform 0.2s;
-}
-
-.edit-btn-small:hover {
-  transform: scale(1.1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
