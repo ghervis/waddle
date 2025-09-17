@@ -67,6 +67,13 @@
       <div class="sidebar-header">
         <h2>🦆 Racers</h2>
         <div class="header-buttons">
+          <button
+            id="manageBtn"
+            class="header-btn manage-btn"
+            onclick="window.game.openManageDialog()"
+          >
+            Manage
+          </button>
           <button id="addRacerBtn" class="header-btn add-btn">➕</button>
           <div class="race-mode-toggle">
             <input type="checkbox" id="raceModeToggle" class="toggle-input" />
@@ -473,7 +480,39 @@
           >
             Cancel
           </button>
-          <button onclick="window.game.removeRacerConfirmed()">Remove</button>
+          <button
+            onclick="window.game.removeRacerConfirmed(document.getElementById('removeRacerDialog'))"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    </dialog>
+    <!-- Manage Dialog -->
+    <dialog class="settings-dialog" id="manageDialog">
+      <div class="dialog-content">
+        <button
+          class="dialog-close-btn"
+          onclick="document.getElementById('manageDialog').close()"
+        >
+          ×
+        </button>
+        <h3>Manage Racers</h3>
+        <div id="manageRacersContainer" class="manage-racers-container"></div>
+        <div class="dialog-buttons">
+          <button
+            type="button"
+            onclick="document.getElementById('manageDialog').close()"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            class="giant-update-btn"
+            onclick="window.game && window.game.applyManageUpdate()"
+          >
+            Update
+          </button>
         </div>
       </div>
     </dialog>
@@ -563,6 +602,16 @@
         updateStartButtonColor();
         updateSectionVisibility();
 
+        // Update manage button visibility
+        const manageBtn = document.getElementById("manageBtn");
+        if (manageBtn) {
+          if (raceMode === "casual") {
+            manageBtn.style.display = "block";
+          } else {
+            manageBtn.style.display = "none";
+          }
+        }
+
         // Update the racers display immediately when mode changes
         if (window.game) {
           window.game.stopRace();
@@ -644,6 +693,16 @@
               toggleVolume();
             }
           });
+        }
+
+        // Set initial manage button visibility based on race mode
+        const manageBtn = document.getElementById("manageBtn");
+        if (manageBtn) {
+          if (raceModeToggle.checked) {
+            manageBtn.style.display = "none";
+          } else {
+            manageBtn.style.display = "block";
+          }
         }
       });
 

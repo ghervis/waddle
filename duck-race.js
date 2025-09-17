@@ -77,6 +77,12 @@ class DuckRaceGame {
       },
     };
 
+    // Track racers marked for deletion
+    this.racersMarkedForDeletion = new Set();
+
+    // Track pending additions in manage dialog
+    this.pendingManageAdditions = [];
+
     this.updateRacersList();
     this.updateAddButtonVisibility();
     this.initializeRankedProfileButton();
@@ -1251,47 +1257,82 @@ class DuckRaceGame {
     this.customRacers.push(newRacer);
     this.saveCustomRacers();
     this.updateRacersList();
+
+    // Scroll the leaderboard to the bottom after adding new racer
+    setTimeout(() => {
+      if (this.leaderboardElement) {
+        this.leaderboardElement.scrollTop =
+          this.leaderboardElement.scrollHeight;
+      }
+    }, 100); // Small delay to ensure DOM is updated
   }
 
   removeRacer(id) {
     const racerIdStr = String(id);
-    const defaultIndex = parseInt(racerIdStr);
-    let racerName;
-    let isDefault = false;
-    if (
-      !isNaN(defaultIndex) &&
-      defaultIndex >= 0 &&
-      defaultIndex < 5 &&
-      !this.isRankedMode()
-    ) {
-      racerName = this.duckNames[defaultIndex] || `Duck ${defaultIndex + 1}`;
-      isDefault = true;
-    } else {
-      const racer = this.customRacers.find((r) => String(r.id) === racerIdStr);
-      if (racer) {
-        racerName = racer.name;
-        isDefault = false;
+
+    // Check if racer is already marked for deletion
+    if (this.racersMarkedForDeletion.has(racerIdStr)) {
+      // Confirm removal
+      const defaultIndex = parseInt(racerIdStr);
+      let racerName;
+      let isDefault = false;
+      if (
+        !isNaN(defaultIndex) &&
+        defaultIndex >= 0 &&
+        defaultIndex < 5 &&
+        !this.isRankedMode()
+      ) {
+        racerName = this.duckNames[defaultIndex] || `Duck ${defaultIndex + 1}`;
+        isDefault = true;
       } else {
-        console.warn("Racer not found:", racerIdStr);
-        return;
+        const racer = this.customRacers.find(
+          (r) => String(r.id) === racerIdStr
+        );
+        if (racer) {
+          racerName = racer.name;
+          isDefault = false;
+        } else {
+          console.warn("Racer not found:", racerIdStr);
+          return;
+        }
       }
+
+      // Actually remove the racer
+      const dialog = {
+        racerId: id,
+        isDefaultRacer: isDefault,
+      };
+      this.removeRacerConfirmed(dialog);
+      this.racersMarkedForDeletion.delete(racerIdStr);
+      this.log(`Removed racer "${racerName}"`, "skill");
+    } else {
+      // Mark racer for deletion with strikethrough
+      this.markRacerForDeletion(id);
     }
-    const dialog = document.getElementById("removeRacerDialog");
-    if (!dialog) {
-      console.error("Remove racer dialog not found");
-      return;
-    }
-    dialog.racerId = id;
-    dialog.isDefaultRacer = isDefault;
-    document.getElementById(
-      "removeRacerMessage"
-    ).textContent = `Are you sure you want to remove ${racerName}?`;
-    dialog.showModal();
   }
 
-  removeRacerConfirmed() {
-    const dialog = document.getElementById("removeRacerDialog");
-    if (!dialog.racerId) return;
+  markRacerForDeletion(id, isDefault) {
+    const racerIdStr = String(id);
+
+    // Add to marked for deletion set
+    this.racersMarkedForDeletion.add(racerIdStr);
+
+    // Update leaderboard to show strikethrough effect
+    this.updateLeaderboard();
+
+    // Log the action
+    this.log(
+      `Marked racer for deletion. Click again to confirm removal.`,
+      "skill"
+    );
+  }
+
+  removeRacerConfirmed(dialog) {
+    // If no dialog provided, fall back to DOM (for backward compatibility)
+    if (!dialog) {
+      dialog = document.getElementById("removeRacerDialog");
+    }
+    if (!dialog || !dialog.racerId) return;
     const id = dialog.racerId;
     const isDefault = dialog.isDefaultRacer;
     const racerIdStr = String(id);
@@ -3636,6 +3677,9 @@ class DuckRaceGame {
         racerCircleContent = `<div class="racer-circle" style="background-color: ${racerColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">${initial}</div>`;
       }
 
+      // Check if racer is marked for deletion
+      const isMarkedForDeletion = this.racersMarkedForDeletion.has(racerId);
+
       entry.innerHTML = `
           <div class="duck-info">
             ${racerCircleContent}
@@ -3646,6 +3690,11 @@ class DuckRaceGame {
             ${removeButton}
           </div>
         `;
+
+      // Apply strikethrough styling if marked for deletion
+      if (isMarkedForDeletion) {
+        entry.classList.add("pending-delete");
+      }
 
       this.leaderboardElement.appendChild(entry);
     });
@@ -4106,6 +4155,1025 @@ class DuckRaceGame {
     this.randomRemarkTimeout = setTimeout(() => {
       this.speakImmediately(randomRemark);
     }, 3500);
+  }
+  // Generic image resize helper for Manage dialog (64x64 base64)
+  async resizeImageFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      try {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = 64;
+            canvas.height = 64;
+            ctx.drawImage(img, 0, 0, 64, 64);
+            const base64Data = canvas.toDataURL("image/png");
+            resolve(base64Data);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // Build consolidated model for Manage dialog
+  getManageModels() {
+    const models = [];
+    if (this.isRankedMode()) return models;
+
+    // Defaults (0..4)
+    for (let i = 0; i < 5; i++) {
+      models.push({
+        key: `d-${i}`,
+        type: "default",
+        index: i,
+        id: i,
+        name: this.customRacerNames[i] || `Duck${i + 1}`,
+        color: this.customRacerColors[i],
+        profilePicture: this.customRacerProfilePictures[i] || null,
+      });
+    }
+
+    // Custom racers
+    this.customRacers.forEach((r, customIndex) => {
+      models.push({
+        key: `c-${customIndex}`,
+        type: "custom",
+        customIndex,
+        id: r.id,
+        name: r.name,
+        color: r.color,
+        profilePicture: r.profilePicture || null,
+      });
+    });
+
+    return models;
+  }
+
+  // Ensure unique name across defaults + custom, excluding one optional name
+  ensureUniqueNameAll(name, excludeName = null) {
+    const names = [];
+
+    for (let i = 0; i < 5; i++) {
+      const n = this.customRacerNames[i] || `Duck${i + 1}`;
+      if (!excludeName || n !== excludeName) names.push(n);
+    }
+    this.customRacers.forEach((r) => {
+      if (!excludeName || r.name !== excludeName) names.push(r.name);
+    });
+
+    // Enforce uniqueness with numeric suffix only (keeps pattern [A-Za-z0-9]{2,16})
+    const base = name;
+    let suffix = 1;
+    let candidate = base;
+
+    const fits = (s) => /^[A-Za-z0-9]{2,16}$/.test(s);
+
+    // If base violates length, trim
+    if (!fits(candidate)) {
+      candidate = candidate.replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+    }
+
+    while (names.includes(candidate)) {
+      const sfx = String(suffix++);
+      const avail = Math.max(1, 16 - sfx.length);
+      const trimmed = base.replace(/[^A-Za-z0-9]/g, "").slice(0, avail);
+      candidate = `${trimmed}${sfx}`;
+    }
+    return candidate;
+  }
+
+  openManageDialog() {
+    if (this.isRankedMode()) {
+      alert("Manage Racers is available only in Casual mode.");
+      return;
+    }
+
+    const dialog = document.getElementById("manageDialog");
+    const container = document.getElementById("manageRacersContainer");
+    if (!dialog || !container) return;
+
+    // Temp cache for pending images keyed by row key
+    this.manageTemp = {};
+
+    // Clear any previous pending additions
+    this.pendingManageAdditions = [];
+
+    this.renderManageRacers();
+
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.style.display = "block";
+    }
+
+    // Clear pending additions when dialog is closed without applying
+    dialog.addEventListener("close", () => {
+      this.pendingManageAdditions = [];
+    });
+  }
+
+  renderManageRacers() {
+    const container = document.getElementById("manageRacersContainer");
+    if (!container) return;
+
+    const models = this.getManageModels();
+
+    let html = `
+      <div class="manage-table">
+    `;
+
+    models.forEach((m) => {
+      const hasPic = m.profilePicture && m.profilePicture.trim() !== "";
+      const avatarStyle = hasPic
+        ? `background-image: url('${m.profilePicture}'); background-size: cover; background-position: center;`
+        : `background-color: ${m.color};`;
+      const initial = (m.name || "D")[0].toUpperCase();
+
+      html += `
+        <div class="manage-row" data-key="${m.key}" data-type="${m.type}" ${
+        m.type === "default"
+          ? `data-index="${m.index}"`
+          : `data-custom-index="${m.customIndex}"`
+      }>
+          <div class="cell avatar">
+            <div
+              class="avatar-circle"
+              id="managePreview-${m.key}"
+              style="${avatarStyle}"
+              onclick="document.getElementById('manageFile-${m.key}').click()"
+              title="Click to change picture"
+            >
+              ${hasPic ? "" : `<span class="avatar-initial">${initial}</span>`}
+            </div>
+            <input type="file" accept="image/*" id="manageFile-${
+              m.key
+            }" style="display:none" />
+          </div>
+          <div class="cell name">
+            <input type="text"
+              id="manageName-${m.key}"
+              value="${m.name}"
+              placeholder="Duck name"
+              pattern="[A-Za-z0-9]{2,16}"
+              minlength="2"
+              maxlength="16"
+              />
+          </div>
+          <div class="cell color">
+            <input type="color" id="manageColor-${m.key}" value="${m.color}">
+          </div>
+          <div class="cell actions">
+            <button
+              class="row-delete-btn"
+              id="manageRowDelete-${m.key}"
+              title="Mark for deletion"
+            >✖</button>
+          </div>
+        </div>
+      `;
+    });
+
+    // New row for adding racer
+    const newColorHex = window.rgbToHex(this.generateUniqueColor());
+    html += `
+      <div class="manage-row add-row">
+        <div class="cell avatar">
+          <div
+            class="avatar-circle"
+            id="managePreview-new"
+            style="background-color: ${newColorHex};"
+            onclick="document.getElementById('manageFile-new').click()"
+            title="Click to add picture"
+          ></div>
+          <input type="file" accept="image/*" id="manageFile-new" style="display:none" />
+        </div>
+        <div class="cell name">
+          <input type="text"
+            id="manageName-new"
+            value=""
+            placeholder="New duck name"
+            pattern="[A-Za-z0-9]{2,16}"
+            minlength="2"
+            maxlength="16"
+            />
+        </div>
+        <div class="cell color">
+          <input type="color" id="manageColor-new" value="${newColorHex}">
+        </div>
+        <div class="cell actions">
+          <button
+            class="row-add-btn"
+            id="manageRowAdd-new"
+            title="Add new racer"
+          >+</button>
+        </div>
+      </div>
+      </div>
+    `;
+
+    container.innerHTML = html;
+
+    // Bind events for existing rows
+    models.forEach((m) => {
+      const key = m.key;
+
+      // File change
+      const fileInput = document.getElementById(`manageFile-${key}`);
+      if (fileInput) {
+        fileInput.addEventListener("change", async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file || !file.type.startsWith("image/")) return;
+          try {
+            const base64 = await this.resizeImageFileToBase64(file);
+            this.manageTemp[key] = this.manageTemp[key] || {};
+            this.manageTemp[key].imageData = base64;
+
+            const preview = document.getElementById(`managePreview-${key}`);
+            if (preview) {
+              preview.style.backgroundImage = `url('${base64}')`;
+              preview.style.backgroundSize = "cover";
+              preview.style.backgroundPosition = "center";
+              // Remove initial if present
+              const initialEl = preview.querySelector(".avatar-initial");
+              if (initialEl) initialEl.remove();
+            }
+          } catch (err) {
+            console.error("Image processing error:", err);
+          }
+        });
+      }
+
+      // per-row Save removed; using global Update button
+
+      // per-row Delete removed; using global Update button
+    });
+
+    // Bind events for add row
+    const newFileInput = document.getElementById("manageFile-new");
+    if (newFileInput) {
+      newFileInput.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file || !file.type.startsWith("image/")) return;
+        try {
+          const base64 = await this.resizeImageFileToBase64(file);
+          this.manageTemp["new"] = { imageData: base64 };
+          const preview = document.getElementById("managePreview-new");
+          if (preview) {
+            preview.style.backgroundImage = `url('${base64}')`;
+            preview.style.backgroundSize = "cover";
+            preview.style.backgroundPosition = "center";
+            const initialEl = preview.querySelector(".avatar-initial");
+            if (initialEl) initialEl.remove();
+          }
+        } catch (err) {
+          console.error("Image processing error:", err);
+        }
+      });
+    }
+
+    // Bind delete buttons programmatically (avoid inline handler parsing issues)
+    const deleteBtns = container.querySelectorAll(".row-delete-btn");
+    deleteBtns.forEach((btn) => {
+      const idAttr = btn.id || "";
+      const prefix = "manageRowDelete-";
+      const keyAttr = idAttr.startsWith(prefix)
+        ? idAttr.substring(prefix.length)
+        : null;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (keyAttr) {
+          this.toggleManageDelete(keyAttr);
+        }
+      });
+    });
+
+    // Bind add button programmatically
+    const addBtn = document.getElementById("manageRowAdd-new");
+    if (addBtn) {
+      addBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.addPendingRacerFromDialog();
+      });
+    }
+  }
+
+  toggleManageDelete(key) {
+    const row = document.querySelector(`.manage-row[data-key="${key}"]`);
+    if (!row) return;
+    const p = row.classList.toggle("pending-delete");
+    row.dataset.delete = p ? "1" : "0";
+  }
+
+  addNewManageRow() {
+    const container = document.getElementById("manageRacersContainer");
+    if (!container) return;
+
+    // Generate unique key for new row
+    const newKey = `temp-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const newColorHex = window.rgbToHex(this.generateUniqueColor());
+
+    // Create new row HTML with + button
+    const newRowHtml = `
+      <div class="manage-row" data-key="${newKey}" data-type="temp">
+        <div class="cell avatar">
+          <div
+            class="avatar-circle"
+            id="managePreview-${newKey}"
+            style="background-color: ${newColorHex};"
+            onclick="document.getElementById('manageFile-${newKey}').click()"
+            title="Click to change picture"
+          ></div>
+          <input type="file" accept="image/*" id="manageFile-${newKey}" style="display:none" />
+        </div>
+        <div class="cell name">
+          <input type="text"
+            id="manageName-${newKey}"
+            value=""
+            placeholder="Duck name"
+            pattern="[A-Za-z0-9]{2,16}"
+            minlength="2"
+            maxlength="16"
+            />
+        </div>
+        <div class="cell color">
+          <input type="color" id="manageColor-${newKey}" value="${newColorHex}">
+        </div>
+        <div class="cell actions">
+          <button
+            class="row-delete-btn"
+            id="manageRowDelete-${newKey}"
+            title="Remove this row"
+          >✖</button>
+        </div>
+      </div>
+    `;
+
+    // Insert new row after the add-row
+    const addRow = container.querySelector(".add-row");
+    if (addRow) {
+      addRow.insertAdjacentHTML("afterend", newRowHtml);
+    }
+
+    // Bind events for the new row
+    this.bindNewRowEvents(newKey);
+  }
+
+  bindNewRowEvents(key) {
+    // File change event
+    const fileInput = document.getElementById(`manageFile-${key}`);
+    if (fileInput) {
+      fileInput.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file || !file.type.startsWith("image/")) return;
+        try {
+          const base64 = await this.resizeImageFileToBase64(file);
+          this.manageTemp[key] = this.manageTemp[key] || {};
+          this.manageTemp[key].imageData = base64;
+
+          const preview = document.getElementById(`managePreview-${key}`);
+          if (preview) {
+            preview.style.backgroundImage = `url('${base64}')`;
+            preview.style.backgroundSize = "cover";
+            preview.style.backgroundPosition = "center";
+            // Remove initial if present
+            const initialEl = preview.querySelector(".avatar-initial");
+            if (initialEl) initialEl.remove();
+          }
+        } catch (err) {
+          console.error("Image processing error:", err);
+        }
+      });
+    }
+
+    // Delete button event
+    const deleteBtn = document.getElementById(`manageRowDelete-${key}`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const row = document.querySelector(`.manage-row[data-key="${key}"]`);
+        if (row) {
+          row.remove();
+          // Clean up temp data
+          if (this.manageTemp && this.manageTemp[key]) {
+            delete this.manageTemp[key];
+          }
+        }
+      });
+    }
+  }
+
+  addPendingRacerFromDialog() {
+    const nameInput = document.getElementById("manageName-new");
+    const colorInput = document.getElementById("manageColor-new");
+    const rawName = (
+      nameInput && nameInput.value ? nameInput.value : ""
+    ).trim();
+    const color = colorInput ? colorInput.value : "#FFD700";
+    const imageData =
+      (this.manageTemp["new"] && this.manageTemp["new"].imageData) || null;
+
+    if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+      alert("Name must be 2-16 alphanumeric characters.");
+      if (nameInput) nameInput.focus();
+      return;
+    }
+
+    const uniqueName = this.ensureUniqueNameAll(rawName, null);
+
+    // Add to pending additions instead of immediately adding
+    this.pendingManageAdditions.push({
+      name: uniqueName,
+      color: color,
+      profilePicture: imageData,
+      key: "pending-" + Date.now(),
+    });
+
+    // Now, convert the add-row to a regular row
+    const addRow = document.querySelector(".add-row");
+    if (addRow) {
+      // Change class
+      addRow.classList.remove("add-row");
+      addRow.classList.add("manage-row");
+      addRow.dataset.key = "temp-" + Date.now();
+      addRow.dataset.type = "temp";
+
+      // Change button
+      const btn = document.getElementById("manageRowAdd-new");
+      if (btn) {
+        btn.classList.remove("row-add-btn");
+        btn.classList.add("row-delete-btn");
+        btn.textContent = "✖";
+        btn.id = "manageRowDelete-" + addRow.dataset.key;
+        btn.title = "Remove this row";
+      }
+
+      // Change ids
+      if (nameInput) nameInput.id = "manageName-" + addRow.dataset.key;
+      if (colorInput) colorInput.id = "manageColor-" + addRow.dataset.key;
+      const preview = document.getElementById("managePreview-new");
+      if (preview) {
+        preview.id = "managePreview-" + addRow.dataset.key;
+        // Set the data
+        preview.style.backgroundColor = color;
+        if (imageData) {
+          preview.style.backgroundImage = `url('${imageData}')`;
+          preview.style.backgroundSize = "cover";
+          preview.style.backgroundPosition = "center";
+        }
+        // Remove initial if present
+        const initialEl = preview.querySelector(".avatar-initial");
+        if (initialEl) initialEl.remove();
+      }
+      const fileInput = document.getElementById("manageFile-new");
+      if (fileInput) fileInput.id = "manageFile-" + addRow.dataset.key;
+
+      // Bind events for the new row
+      this.bindNewRowEvents(addRow.dataset.key);
+    }
+
+    // Add a new add-row
+    this.addNewAddRow();
+
+    // Scroll to the bottom of the manage dialog
+    const container = document.getElementById("manageRacersContainer");
+    if (container) {
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 100); // Small delay to ensure DOM is updated
+    }
+  }
+
+  addNewAddRow() {
+    const container = document.getElementById("manageRacersContainer");
+    if (!container) return;
+
+    const manageTable = container.querySelector(".manage-table");
+    if (!manageTable) return;
+
+    const newColorHex = window.rgbToHex(this.generateUniqueColor());
+    const newRowHtml = `
+      <div class="manage-row add-row">
+        <div class="cell avatar">
+          <div
+            class="avatar-circle"
+            id="managePreview-new"
+            style="background-color: ${newColorHex};"
+            onclick="document.getElementById('manageFile-new').click()"
+            title="Click to add picture"
+          ></div>
+          <input type="file" accept="image/*" id="manageFile-new" style="display:none" />
+        </div>
+        <div class="cell name">
+          <input type="text"
+            id="manageName-new"
+            value=""
+            placeholder="New duck name"
+            pattern="[A-Za-z0-9]{2,16}"
+            minlength="2"
+            maxlength="16"
+            />
+        </div>
+        <div class="cell color">
+          <input type="color" id="manageColor-new" value="${newColorHex}">
+        </div>
+        <div class="cell actions">
+          <button
+            class="row-add-btn"
+            id="manageRowAdd-new"
+            title="Add new racer"
+          >+</button>
+        </div>
+      </div>
+    `;
+
+    // Insert inside the manage-table
+    manageTable.insertAdjacentHTML("beforeend", newRowHtml);
+
+    // Bind events for the new add-row
+    const newFileInput = document.getElementById("manageFile-new");
+    if (newFileInput) {
+      newFileInput.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file || !file.type.startsWith("image/")) return;
+        try {
+          const base64 = await this.resizeImageFileToBase64(file);
+          this.manageTemp["new"] = { imageData: base64 };
+          const preview = document.getElementById("managePreview-new");
+          if (preview) {
+            preview.style.backgroundImage = `url('${base64}')`;
+            preview.style.backgroundSize = "cover";
+            preview.style.backgroundPosition = "center";
+            const initialEl = preview.querySelector(".avatar-initial");
+            if (initialEl) initialEl.remove();
+          }
+        } catch (err) {
+          console.error("Image processing error:", err);
+        }
+      });
+    }
+
+    const newAddBtn = document.getElementById("manageRowAdd-new");
+    if (newAddBtn) {
+      newAddBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.addPendingRacerFromDialog();
+      });
+    }
+  }
+
+  applyManageSave(model) {
+    const key = model.key;
+    const nameInput = document.getElementById(`manageName-${key}`);
+    const colorInput = document.getElementById(`manageColor-${key}`);
+    const rawName = (
+      nameInput && nameInput.value ? nameInput.value : ""
+    ).trim();
+    const color = colorInput ? colorInput.value : model.color;
+    const imageData =
+      (this.manageTemp[key] && this.manageTemp[key].imageData) ||
+      model.profilePicture ||
+      null;
+
+    if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+      alert("Name must be 2-16 alphanumeric characters.");
+      nameInput && nameInput.focus();
+      return;
+    }
+
+    // Ensure unique, excluding the old name for this row
+    const uniqueName = this.ensureUniqueNameAll(rawName, model.name);
+
+    if (model.type === "default") {
+      const idx = model.index;
+      // Update defaults
+      this.customRacerNames[idx] = uniqueName;
+      this.customRacerColors[idx] = color;
+      this.customRacerProfilePictures[idx] = imageData;
+
+      localStorage.setItem(
+        "customRacerNames",
+        JSON.stringify(this.customRacerNames)
+      );
+      this.saveDefaultRacerColors();
+      this.saveDefaultRacerProfilePictures();
+
+      // Update active duck and arrays without reinitializing everything
+      if (this.ducks && this.ducks[idx]) {
+        this.ducks[idx].name = uniqueName;
+        this.ducks[idx].color = color;
+        this.ducks[idx].profilePicture = imageData;
+      }
+      if (this.duckNames && this.duckNames[idx] !== undefined) {
+        this.duckNames[idx] = uniqueName;
+        this.duckColors[idx] = color;
+        this.duckProfilePictures[idx] = imageData;
+      }
+    } else {
+      // Custom racer
+      const cIdx = model.customIndex;
+      if (cIdx < 0 || cIdx >= this.customRacers.length) return;
+
+      this.customRacers[cIdx].name = uniqueName;
+      this.customRacers[cIdx].color = color;
+      this.customRacers[cIdx].profilePicture = imageData;
+      this.saveCustomRacers();
+
+      // Update active duck (custom ducks are at offset 5)
+      const duckIdx = 5 + cIdx;
+      if (this.ducks && this.ducks[duckIdx]) {
+        this.ducks[duckIdx].name = uniqueName;
+        this.ducks[duckIdx].color = color;
+        this.ducks[duckIdx].profilePicture = imageData;
+      }
+      if (this.duckNames && this.duckNames[duckIdx] !== undefined) {
+        this.duckNames[duckIdx] = uniqueName;
+        this.duckColors[duckIdx] = color;
+        this.duckProfilePictures[duckIdx] = imageData;
+      }
+    }
+
+    this.updateLeaderboard();
+    this.draw();
+
+    // Reflect saved data back into the model for subsequent edits
+    model.name = uniqueName;
+    model.color = color;
+    model.profilePicture = imageData;
+
+    // Clear temp image cache for this row
+    if (this.manageTemp && this.manageTemp[key]) {
+      delete this.manageTemp[key];
+    }
+  }
+
+  applyManageDelete(model) {
+    if (this.raceActive) {
+      alert(
+        "Cannot delete/reset racers during an active race. Stop the race first."
+      );
+      return;
+    }
+
+    if (model.type === "default") {
+      if (!confirm(`Reset default racer slot #${model.index + 1}?`)) return;
+
+      // Reset to default values
+      const defaults = ["#FFD700", "#FF6347", "#32CD32", "#1E90FF", "#DA70D6"];
+      this.customRacerNames[model.index] = this.getRandomDuckName();
+      this.customRacerColors[model.index] = defaults[model.index];
+      this.customRacerProfilePictures[model.index] = null;
+
+      localStorage.setItem(
+        "customRacerNames",
+        JSON.stringify(this.customRacerNames)
+      );
+      this.saveDefaultRacerColors();
+      this.saveDefaultRacerProfilePictures();
+
+      // Refresh lists and UI
+      this.updateRacersList();
+      this.renderManageRacers();
+    } else {
+      // Custom
+      const cIdx = model.customIndex;
+      const racer = this.customRacers[cIdx];
+      if (!racer) return;
+
+      if (!confirm(`Delete racer "${racer.name}"?`)) return;
+
+      this.customRacers.splice(cIdx, 1);
+      this.saveCustomRacers();
+
+      // Rebuild lists and UI
+      this.updateRacersList();
+      this.renderManageRacers();
+    }
+  }
+
+  applyManageAdd() {
+    if (this.isRankedMode()) {
+      alert("Adding racers is available only in Casual mode.");
+      return;
+    }
+    if (this.raceActive) {
+      alert("Cannot add racers during an active race. Stop the race first.");
+      return;
+    }
+
+    const nameInput = document.getElementById("manageName-new");
+    const colorInput = document.getElementById("manageColor-new");
+    const rawName = (
+      nameInput && nameInput.value ? nameInput.value : ""
+    ).trim();
+    const color = colorInput ? colorInput.value : "#FFD700";
+    const imageData =
+      (this.manageTemp["new"] && this.manageTemp["new"].imageData) || null;
+
+    if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+      alert("Name must be 2-16 alphanumeric characters.");
+      nameInput && nameInput.focus();
+      return;
+    }
+
+    const uniqueName = this.ensureUniqueNameAll(rawName, null);
+
+    this.addRacer(uniqueName, color, imageData);
+
+    // Clear add row fields and preview, and re-render table
+    if (nameInput) nameInput.value = "";
+    if (colorInput) colorInput.value = "#FFD700";
+    const preview = document.getElementById("managePreview-new");
+    if (preview) {
+      preview.style.backgroundImage = "none";
+      preview.innerHTML = "";
+    }
+    if (this.manageTemp && this.manageTemp["new"]) {
+      delete this.manageTemp["new"];
+    }
+
+    this.renderManageRacers();
+  }
+
+  // Apply all edits in the Manage dialog in one shot
+  applyManageUpdate() {
+    if (this.isRankedMode()) {
+      alert("Manage is available only in Casual mode.");
+      return;
+    }
+    const container = document.getElementById("manageRacersContainer");
+    if (!container) return;
+
+    // Build reference map from current models
+    const models = this.getManageModels();
+    const byKey = {};
+    models.forEach((m) => (byKey[m.key] = m));
+
+    // Helper to ensure uniqueness in-session
+    const used = new Set();
+    const ensureUniqueInSet = (base) => {
+      let name = base;
+      let i = 1;
+      while (used.has(name)) {
+        name = `${base} (${i++})`;
+      }
+      used.add(name);
+      return name;
+    };
+
+    // Seed used with current names to stabilize uniqueness
+    models.forEach((m) => used.add(m.name));
+
+    // Collect row intents
+    const rows = Array.from(
+      container.querySelectorAll(".manage-row[data-key]")
+    );
+    const defaultResets = []; // indices to reset
+    const customDeletes = []; // customIndex list to delete
+    const defaultUpdates = []; // {index, name, color, picture}
+    const customUpdates = []; // {customIndex, name, color, picture}
+
+    // Defaults palette
+    const defaultPalette = [
+      "#FFD700",
+      "#FF6347",
+      "#32CD32",
+      "#1E90FF",
+      "#DA70D6",
+    ];
+
+    // Validate and stage changes
+    for (const row of rows) {
+      const key = row.dataset.key;
+      const type = row.dataset.type;
+      const model = byKey[key];
+      if (!model) continue;
+
+      const nameInput = document.getElementById(`manageName-${key}`);
+      const colorInput = document.getElementById(`manageColor-${key}`);
+
+      const rawName = (
+        nameInput && nameInput.value ? nameInput.value : ""
+      ).trim();
+      const color = colorInput ? colorInput.value : model.color;
+      const del =
+        row.dataset.delete === "1" || row.classList.contains("pending-delete");
+
+      if (del) {
+        if (type === "default") {
+          defaultResets.push(model.index);
+        } else {
+          customDeletes.push(model.customIndex);
+        }
+        continue;
+      }
+
+      // Strict validation
+      if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+        alert(
+          `Invalid name for "${model.name}". Use 2-16 alphanumeric characters.`
+        );
+        if (nameInput) nameInput.focus();
+        return;
+      }
+
+      // Choose name (unique)
+      // Temporarily remove current model.name from used so it can keep its name without suffix
+      used.delete(model.name);
+      const uniqueName = ensureUniqueInSet(rawName);
+
+      // Picture: pending uploaded image wins, else keep existing
+      const pending =
+        (this.manageTemp &&
+          this.manageTemp[key] &&
+          this.manageTemp[key].imageData) ||
+        null;
+      const picture = pending !== null ? pending : model.profilePicture || null;
+
+      if (type === "default") {
+        defaultUpdates.push({
+          index: model.index,
+          name: uniqueName,
+          color,
+          picture,
+        });
+      } else {
+        customUpdates.push({
+          customIndex: model.customIndex,
+          name: uniqueName,
+          color,
+          picture,
+        });
+      }
+    }
+
+    // Handle add-row (new)
+    const newNameEl = document.getElementById("manageName-new");
+    const newColorEl = document.getElementById("manageColor-new");
+    if (newNameEl && newColorEl) {
+      const rawName = newNameEl.value.trim();
+      if (rawName.length > 0) {
+        if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+          alert("New duck name must be 2-16 alphanumeric characters.");
+          newNameEl.focus();
+          return;
+        }
+        const uniqueName = ensureUniqueInSet(rawName);
+        const color = newColorEl.value || "#FFD700";
+        const picture =
+          (this.manageTemp &&
+            this.manageTemp["new"] &&
+            this.manageTemp["new"].imageData) ||
+          null;
+
+        // Push without calling addRacer (we will rebuild once at the end)
+        const newRacer = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          name: uniqueName,
+          color,
+          profilePicture: picture,
+        };
+        this.customRacers.push(newRacer);
+      }
+    }
+
+    // Handle dynamic temp rows
+    const tempRows = Array.from(
+      container.querySelectorAll(".manage-row[data-type='temp']")
+    );
+    for (const tempRow of tempRows) {
+      const key = tempRow.dataset.key;
+      const nameInput = document.getElementById(`manageName-${key}`);
+      const colorInput = document.getElementById(`manageColor-${key}`);
+
+      const rawName = (
+        nameInput && nameInput.value ? nameInput.value : ""
+      ).trim();
+      const color = colorInput ? colorInput.value : "#FFD700";
+
+      if (rawName.length > 0) {
+        if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+          alert(
+            `Invalid name for new racer. Use 2-16 alphanumeric characters.`
+          );
+          if (nameInput) nameInput.focus();
+          return;
+        }
+
+        const uniqueName = ensureUniqueInSet(rawName);
+        const picture =
+          (this.manageTemp &&
+            this.manageTemp[key] &&
+            this.manageTemp[key].imageData) ||
+          null;
+
+        // Create new racer from temp row
+        const newRacer = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          name: uniqueName,
+          color,
+          profilePicture: picture,
+        };
+        this.customRacers.push(newRacer);
+      }
+    }
+
+    // Apply default resets
+    if (defaultResets.length > 0) {
+      defaultResets.forEach((idx) => {
+        const resetName = ensureUniqueInSet(this.getRandomDuckName());
+        this.customRacerNames[idx] = resetName;
+        this.customRacerColors[idx] = defaultPalette[idx] || "#FFD700";
+        this.customRacerProfilePictures[idx] = null;
+      });
+      localStorage.setItem(
+        "customRacerNames",
+        JSON.stringify(this.customRacerNames)
+      );
+      this.saveDefaultRacerColors();
+      this.saveDefaultRacerProfilePictures();
+    }
+
+    // Apply default updates
+    if (defaultUpdates.length > 0) {
+      defaultUpdates.forEach(({ index, name, color, picture }) => {
+        this.customRacerNames[index] = name;
+        this.customRacerColors[index] = color;
+        this.customRacerProfilePictures[index] = picture;
+      });
+      localStorage.setItem(
+        "customRacerNames",
+        JSON.stringify(this.customRacerNames)
+      );
+      this.saveDefaultRacerColors();
+      this.saveDefaultRacerProfilePictures();
+    }
+
+    // Apply custom deletions (splice in descending order)
+    if (customDeletes.length > 0) {
+      customDeletes
+        .sort((a, b) => b - a)
+        .forEach((cIdx) => {
+          if (cIdx >= 0 && cIdx < this.customRacers.length) {
+            this.customRacers.splice(cIdx, 1);
+          }
+        });
+    }
+
+    // Apply custom updates
+    customUpdates.forEach(({ customIndex, name, color, picture }) => {
+      if (customIndex >= 0 && customIndex < this.customRacers.length) {
+        this.customRacers[customIndex].name = name;
+        this.customRacers[customIndex].color = color;
+        this.customRacers[customIndex].profilePicture = picture;
+      }
+    });
+
+    // Process pending additions from manage dialog
+    if (this.pendingManageAdditions.length > 0) {
+      this.pendingManageAdditions.forEach((pending) => {
+        const newRacer = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          name: pending.name,
+          color: pending.color,
+          profilePicture: pending.profilePicture,
+        };
+        this.customRacers.push(newRacer);
+      });
+      this.pendingManageAdditions = []; // Clear pending additions
+    }
+
+    // Persist customs
+    this.saveCustomRacers();
+
+    // Clear temp images
+    this.manageTemp = {};
+
+    // Rebuild view and UI once
+    this.updateRacersList();
+    this.updateLeaderboard();
+    this.draw();
+
+    // Scroll the leaderboard to the bottom after adding new racers
+    setTimeout(() => {
+      if (this.leaderboardElement) {
+        this.leaderboardElement.scrollTop =
+          this.leaderboardElement.scrollHeight;
+      }
+    }, 100); // Small delay to ensure DOM is updated
+
+    // Close the dialog to signal that editing is done
+    const dialog = document.getElementById("manageDialog");
+    if (dialog && typeof dialog.close === "function") {
+      dialog.close();
+    }
   }
 }
 

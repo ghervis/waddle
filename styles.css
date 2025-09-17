@@ -510,6 +510,7 @@ canvas {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  position: relative;
 }
 
 .duck-info {
@@ -1609,4 +1610,304 @@ input[type="range"]::-moz-range-thumb {
 
 input[type="range"]:hover {
   background: #ccc;
+}
+
+/* Manage Racers dialog table */
+.manage-racers-container {
+  margin-top: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.manage-racers-container::-webkit-scrollbar {
+  width: 6px;
+}
+.manage-racers-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+.manage-racers-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+.manage-racers-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.manage-table {
+  display: grid;
+  grid-auto-rows: minmax(24px, auto);
+  row-gap: 8px;
+}
+
+.manage-row {
+  display: grid;
+  grid-template-columns: 18% 45% 15% 10%;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.manage-row.add-row {
+  background: #eefaf7;
+  border-color: #c8eee6;
+}
+
+.manage-row[data-type="temp"] {
+  border-color: #9acd32;
+}
+
+.manage-row[data-type="temp"] .avatar-circle {
+  border-color: #9acd32;
+}
+
+.manage-row .cell {
+  display: flex;
+  align-items: center;
+}
+
+.manage-row .cell.avatar {
+  gap: 6px;
+}
+
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: bold;
+  background-color: #9aa0a6;
+  background-size: cover;
+  background-position: center;
+}
+
+.avatar-initial {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.avatar-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ddd;
+  cursor: pointer;
+  font-size: 14px;
+  border: 1px solid #cfcfcf;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.avatar-upload-btn:hover {
+  transform: scale(1.05);
+  background: #e9e9e9;
+}
+.avatar-upload-btn input {
+  display: none;
+}
+
+.manage-row .cell.name {
+  flex-direction: column;
+  align-items: stretch;
+}
+.manage-row .cell.name input[type="text"] {
+  width: 100%;
+  padding: 7px 10px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+.manage-row .cell .inline-hint {
+  margin-top: 3px;
+  font-size: 10px;
+  color: #666;
+}
+
+.manage-row .cell.color input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0.5px solid #ccc;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+
+  &::-webkit-color-swatch {
+    border: 0.5px solid #ccc;
+    border-radius: 50%;
+    padding: 0;
+  }
+
+  &::-webkit-color-swatch-wrapper {
+    border: 0.5px solid #ccc;
+    border-radius: 50%;
+    padding: 0;
+  }
+}
+
+.manage-row .cell.actions {
+  gap: 8px;
+  justify-content: flex-end;
+}
+.manage-row .cell.actions .save-btn {
+  background: #4ecdc4;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.manage-row .cell.actions .save-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+.manage-row .cell.actions .delete-btn {
+  background: linear-gradient(45deg, #ff4757, #c44569);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.manage-row .cell.actions .delete-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.manage-row.add-row .cell.actions .add-btn {
+  background: #27ae60;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.manage-row.add-row .cell.actions .add-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive tweaks for small screens inside dialog */
+@media (max-width: 480px) {
+  .manage-row {
+  }
+  .manage-row .cell.color,
+  .manage-row .cell.actions {
+    justify-content: space-between;
+  }
+}
+
+/* Manage dialog - pending-delete state and per-row delete button */
+.manage-row {
+  position: relative;
+}
+
+.manage-row.pending-delete {
+  opacity: 0.6;
+  filter: grayscale(0.2);
+}
+
+.manage-row.pending-delete::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 2px;
+  background: #e74c3c;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.15);
+}
+
+/* Small per-row delete button pinned to upper-right of the row */
+.row-delete-btn {
+  /* position: absolute; */
+  /* top: 6px; */
+  /* right: 6px; */
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #c44569;
+  background: linear-gradient(45deg, #ff4757, #c44569);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+/* Add button styling for manage racers dialog */
+.row-add-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: #9acd32;
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.row-add-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.row-delete-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.manage-row.pending-delete .row-delete-btn {
+  background: #95a5a6;
+  border-color: #7f8c8d;
+}
+
+/* Pending delete styling for main leaderboard */
+.racer-config.pending-delete {
+  opacity: 0.6;
+  filter: grayscale(0.2);
+}
+
+.racer-config.pending-delete::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 2px;
+  background: #e74c3c;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.15);
 }
