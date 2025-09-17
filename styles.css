@@ -94,13 +94,6 @@ body:before {
   transform: scale(1.1);
 }
 
-.add-btn {
-  background: white;
-  color: #27ae60;
-  border-color: #27ae60;
-  min-width: unset;
-}
-
 .start-btn {
   background: red;
   color: #fff;
@@ -236,10 +229,6 @@ body:before {
   height: 35px;
   border-radius: 50%;
   min-width: 35px;
-}
-
-.sidebar.collapsed .add-btn {
-  display: none;
 }
 
 .sidebar.collapsed .skill-list {
@@ -1786,22 +1775,6 @@ input[type="range"]:hover {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .manage-row .cell.actions .delete-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-}
-
-.manage-row.add-row .cell.actions .add-btn {
-  background: #27ae60;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 12px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.manage-row.add-row .cell.actions .add-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }

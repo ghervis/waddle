@@ -84,7 +84,6 @@ class DuckRaceGame {
     this.pendingManageAdditions = [];
 
     this.updateRacersList();
-    this.updateAddButtonVisibility();
     this.initializeRankedProfileButton();
     this.draw();
     this.generateBackgroundElements();
@@ -1388,7 +1387,6 @@ class DuckRaceGame {
       this.initializeDucks(racerConfigs);
       this.updateLeaderboard();
       this.draw();
-      this.updateAddButtonVisibility();
       return;
     }
 
@@ -1423,7 +1421,6 @@ class DuckRaceGame {
     this.updateLeaderboard();
 
     this.draw();
-    this.updateAddButtonVisibility();
   }
 
   generateRandomColor() {
@@ -1529,10 +1526,6 @@ class DuckRaceGame {
       }
     });
 
-    document.getElementById("addRacerBtn").addEventListener("click", () => {
-      this.openAddRacerDialog();
-    });
-
     // Race title management
     this.raceTitleInput.addEventListener("focus", () => {
       if (!this.raceActive) {
@@ -1611,78 +1604,6 @@ class DuckRaceGame {
       }
     };
     setTimeout(backupGameLoop, 16.67);
-  }
-
-  openAddRacerDialog() {
-    const dialog = document.getElementById("addRacerDialog");
-    if (!dialog) {
-      console.error("Add racer dialog element not found in DOM");
-      return;
-    }
-
-    // Generate a random unique color and reset dialog state
-    const randomColor = this.generateUniqueColor();
-    dialog.currentColor = randomColor;
-    dialog.uploadedImage = null;
-
-    // Set initial color picker value
-    const colorPicker = document.getElementById("addDialogColorPicker");
-    if (colorPicker) {
-      colorPicker.value = window.rgbToHex(randomColor);
-    }
-
-    // Add event listener for color picker if not already added
-    if (colorPicker && !colorPicker.dataset.listenerAdded) {
-      colorPicker.onchange = (e) => {
-        const selectedColor = e.target.value;
-        dialog.currentColor = selectedColor;
-      };
-      colorPicker.dataset.listenerAdded = "true";
-    }
-
-    // Reset fields
-    const nameInput = document.getElementById("addDialogRacerName");
-    if (nameInput) {
-      nameInput.value = "";
-    }
-    const preview = document.getElementById("addDialogImagePreview");
-    if (preview) {
-      preview.innerHTML = "";
-    }
-    const fileInput = document.getElementById("addDialogImageFile");
-    if (fileInput) {
-      fileInput.value = "";
-    }
-
-    // Open dialog
-    if (typeof dialog.showModal === "function") {
-      dialog.showModal();
-    } else {
-      dialog.style.display = "block";
-    }
-
-    if (nameInput) nameInput.focus();
-  }
-
-  addRacerFromDialog() {
-    const name = document.getElementById("addDialogRacerName").value;
-    const dialog = document.getElementById("addRacerDialog");
-    const colorPicker = document.getElementById("addDialogColorPicker");
-    const color = colorPicker
-      ? colorPicker.value
-      : dialog
-      ? dialog.currentColor
-      : this.generateUniqueColor();
-    const imageData = dialog ? dialog.uploadedImage : null;
-
-    if (name.trim()) {
-      this.addRacer(name, color, imageData);
-      if (dialog && typeof dialog.close === "function") {
-        dialog.close();
-      } else if (dialog) {
-        dialog.style.display = "none";
-      }
-    }
   }
 
   handleDragOver(event) {
@@ -2061,16 +1982,6 @@ class DuckRaceGame {
     if (!racer) {
       console.error("Racer not found:", racerId);
       return;
-    }
-
-    // Ensure Add dialog is closed if it is open
-    const addDlg = document.getElementById("addRacerDialog");
-    if (addDlg) {
-      if (typeof addDlg.close === "function") {
-        addDlg.close();
-      } else {
-        addDlg.style.display = "none";
-      }
     }
 
     const dialog = document.getElementById("editRacerDialog");
@@ -2615,9 +2526,6 @@ class DuckRaceGame {
 
     // Re-enable the start button
     this.toggleStartBtn(true);
-
-    // Update add button visibility
-    this.updateAddButtonVisibility();
 
     // Disable race mode toggle during race
     if (window.updateRaceModeToggleState) {
@@ -3430,9 +3338,6 @@ class DuckRaceGame {
     startBtn.innerHTML = "🏁 <span class='startBtn-text'>Start</span>";
     startBtn.disabled = false;
 
-    // Update add button visibility
-    this.updateAddButtonVisibility();
-
     // Re-enable race mode toggle after race
     if (window.updateRaceModeToggleState) {
       window.updateRaceModeToggleState(false);
@@ -3468,9 +3373,6 @@ class DuckRaceGame {
     const startBtn = document.getElementById("startBtn");
     startBtn.innerHTML = "🏁 <span class='startBtn-text'>Start</span>";
     startBtn.disabled = false;
-
-    // Update add button visibility
-    this.updateAddButtonVisibility();
 
     // Re-enable race title editing
     this.raceTitleInput.disabled = false;
@@ -4054,15 +3956,6 @@ class DuckRaceGame {
   onRacerDataUpdated() {
     if (this.isRankedMode()) {
       this.updateRankedProfileButton();
-    }
-  }
-
-  updateAddButtonVisibility() {
-    const addBtn = document.getElementById("addRacerBtn");
-    if (this.isRankedMode() || this.raceActive) {
-      addBtn.classList.add("hidden");
-    } else {
-      addBtn.classList.remove("hidden");
     }
   }
 
