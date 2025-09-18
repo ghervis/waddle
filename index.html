@@ -436,7 +436,17 @@
         >
           ×
         </button>
-        <h3>Manage Racers</h3>
+        <div class="dialog-header">
+          <div class="manage-mode-toggle">
+            <input type="checkbox" id="manageModeToggle" class="toggle-input" />
+            <label for="manageModeToggle" class="toggle-label">
+              <span class="toggle-text casual">Casual</span>
+              <span class="toggle-text discord">Discord</span>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <h3>Manage Racers</h3>
+        </div>
         <div id="manageRacersContainer" class="manage-racers-container"></div>
         <div class="dialog-buttons">
           <button

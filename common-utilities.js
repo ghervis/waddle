@@ -1,4 +1,9 @@
 window.rgbToHex = (rgbString) => {
+  if (/^#([0-9A-Fa-f]{6})$/.test(rgbString)) {
+    // Already in hex format
+    return rgbString;
+  }
+
   // 1. Extract R, G, B values
   const match = rgbString.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
   if (!match) {

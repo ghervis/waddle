@@ -204,6 +204,102 @@ body:before {
   transform: none;
 }
 
+/* Manage Mode Toggle Slider */
+.manage-mode-toggle {
+  margin-bottom: 10px;
+  user-select: none;
+}
+
+/* Override margin when in dialog header */
+.dialog-header .manage-mode-toggle {
+  margin-bottom: 0;
+}
+
+.manage-mode-toggle .toggle-input {
+  display: none;
+}
+
+.manage-mode-toggle .toggle-label {
+  display: inline-block;
+  width: 65px;
+  height: 26px;
+  position: relative;
+  background: #228b22;
+  border-radius: 14px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 0.3s ease;
+  border: 2px solid #1a6b1a;
+}
+
+.manage-mode-toggle .toggle-label:hover {
+  transform: scale(1.05);
+}
+
+.manage-mode-toggle .toggle-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: bold;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  color: white;
+}
+
+.manage-mode-toggle .toggle-text.casual {
+  opacity: 1;
+  left: 68%;
+}
+
+.manage-mode-toggle .toggle-text.discord {
+  opacity: 0;
+  left: 32%;
+}
+
+.manage-mode-toggle .toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  z-index: 1;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* When checked (Discord mode) */
+.manage-mode-toggle .toggle-input:checked + .toggle-label {
+  background: #5865f2;
+  border-color: #4752c4;
+}
+
+.manage-mode-toggle .toggle-input:checked + .toggle-label .toggle-slider {
+  transform: translateX(38px);
+}
+
+.manage-mode-toggle .toggle-input:checked + .toggle-label .toggle-text.casual {
+  opacity: 0;
+}
+
+.manage-mode-toggle .toggle-input:checked + .toggle-label .toggle-text.discord {
+  opacity: 1;
+}
+
+/* Disabled state for manage mode toggle */
+.manage-mode-toggle .toggle-input:disabled + .toggle-label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.manage-mode-toggle .toggle-input:disabled + .toggle-label:hover {
+  transform: none;
+}
+
 .header-btn.hidden {
   display: none;
 }
@@ -610,6 +706,20 @@ canvas {
   margin-top: 0;
   color: #2c3e50;
   text-align: center;
+}
+
+/* Dialog header for manage dialog */
+.dialog-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  text-align: left;
 }
 
 .dialog-content input {

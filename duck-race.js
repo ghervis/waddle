@@ -48,7 +48,16 @@ class DuckRaceGame {
     // Load settings from localStorage
     this.loadSettings();
 
+    // Load manage mode from localStorage
+    this.manageMode = localStorage.getItem("manageMode") || "casual";
+
     this.onlineRaceData = null;
+
+    // Discord server logo for manage button
+    this.discordServerLogo = null;
+
+    // Update Manage button color based on loaded mode
+    this.updateManageButtonColor();
 
     // Skills system
     this.skills = {
@@ -83,11 +92,16 @@ class DuckRaceGame {
     // Track pending additions in manage dialog
     this.pendingManageAdditions = [];
 
-    this.updateRacersList();
+    this.initializeAsync();
     this.initializeRankedProfileButton();
     this.draw();
     this.generateBackgroundElements();
     this.setupEventListeners();
+  }
+
+  async initializeAsync() {
+    await this.updateRacersList();
+    await this.updateManageButtonImage();
   }
 
   initializeRankedProfileButton() {
@@ -1234,7 +1248,7 @@ class DuckRaceGame {
     );
   }
 
-  addRacer(name, color, profilePicture = "") {
+  async addRacer(name, color, profilePicture = "") {
     // Ensure unique name
     let uniqueName = name || `Duck ${this.customRacers.length + 1}`;
     let counter = 1;
@@ -1255,7 +1269,7 @@ class DuckRaceGame {
     };
     this.customRacers.push(newRacer);
     this.saveCustomRacers();
-    this.updateRacersList();
+    await this.updateRacersList();
 
     // Scroll the leaderboard to the bottom after adding new racer
     setTimeout(() => {
@@ -1368,7 +1382,7 @@ class DuckRaceGame {
     dialog.close();
   }
 
-  updateRacersList() {
+  async updateRacersList() {
     if (this.isRankedMode()) {
       // Ranked mode: Use only ranked racer data
       const racerConfigs = [
@@ -1388,6 +1402,63 @@ class DuckRaceGame {
       this.updateLeaderboard();
       this.draw();
       return;
+    }
+
+    // Check if we're in Discord mode from manage dialog
+    if (this.manageMode === "discord") {
+      // Discord mode: Use Discord members as racers
+      const racerConfigs = [];
+
+      // Fetch Discord members and convert to racer configs
+      try {
+        const discordMembers = await this.fetchDiscordMembers();
+        if (discordMembers && discordMembers.members) {
+          racerConfigs.push(
+            ...(await Promise.all(
+              discordMembers.members.map(async (member) => {
+                let color = this.generateRandomColor(); // default random
+                if (member.avatarUrl) {
+                  try {
+                    const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(
+                      member.avatarUrl
+                    )}`;
+                    color = await this.getAverageColor(proxiedUrl);
+                  } catch (e) {
+                    console.warn(
+                      "Failed to get average color for",
+                      member.avatarUrl,
+                      e
+                    );
+                    color = this.generateRandomColor();
+                  }
+                }
+                return {
+                  id: member.id,
+                  name: member.nickname || member.username,
+                  color: color,
+                  profilePicture: member.avatarUrl || null,
+                };
+              })
+            ))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch Discord members for racers:", error);
+        this.log("❌ Failed to fetch Discord members", "skill");
+        // Fallback to casual mode
+        this.manageMode = "casual";
+      }
+
+      if (racerConfigs.length > 0) {
+        this.duckNames = racerConfigs.map((c) => c.name);
+        this.duckColors = racerConfigs.map((c) => c.color);
+        this.duckProfilePictures = racerConfigs.map((c) => c.profilePicture);
+
+        this.initializeDucks(racerConfigs);
+        this.updateLeaderboard();
+        this.draw();
+        return;
+      }
     }
 
     // Casual mode: Always show default racers, plus any custom racers
@@ -1433,12 +1504,16 @@ class DuckRaceGame {
     this.draw();
   }
 
+  rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
   generateRandomColor() {
     // Generate a random color from the full RGB range
     const r = Math.floor(Math.random() * 256);
     const g = Math.floor(Math.random() * 256);
     const b = Math.floor(Math.random() * 256);
-    return `rgb(${r}, ${g}, ${b})`;
+    return this.rgbToHex(r, g, b);
   }
 
   generateUniqueColor() {
@@ -1452,6 +1527,47 @@ class DuckRaceGame {
     } while (this.duckColors.includes(newColor) && attempts < maxAttempts);
 
     return newColor;
+  }
+
+  async getAverageColor(imageUrl) {
+    console.log("get average color for", imageUrl);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let r = 0,
+          g = 0,
+          b = 0,
+          count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i];
+          g += data[i + 1];
+          b += data[i + 2];
+          count++;
+        }
+        if (count === 0) {
+          resolve(this.generateRandomColor());
+          return;
+        }
+        r = Math.floor(r / count);
+        g = Math.floor(g / count);
+        b = Math.floor(b / count);
+
+        console.log("average color:", r, g, b);
+        resolve(this.rgbToHex(r, g, b));
+      };
+      img.onerror = () => {
+        resolve(this.generateRandomColor());
+      };
+      img.src = imageUrl;
+    });
   }
 
   generateBackgroundElements() {
@@ -2330,18 +2446,12 @@ class DuckRaceGame {
     )}`;
 
     try {
-      const response = await fetch(corsProxyRankedRaceUrl);
-
-      if (429 === response.status) {
-        console.info("Replaying response");
-        return await response.json();
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await this.cachedFetch(
+        corsProxyRankedRaceUrl,
+        {},
+        `ranked_race_${window.okey}`,
+        30000
+      );
       console.log("🎮 Online ranked race response:", data);
       return data;
     } catch (error) {
@@ -3811,8 +3921,12 @@ class DuckRaceGame {
     )}`;
 
     try {
-      const response = await fetch(corsProxyGenerateProfileUrl);
-      const data = await response.json();
+      const data = await this.cachedFetch(
+        corsProxyGenerateProfileUrl,
+        {},
+        `generate_profile_${window.okey}`,
+        30000
+      );
       window.localStorage.setItem("rankedRacerId", data.id);
       window.localStorage.setItem("rankedRacerName", data.name);
       window.localStorage.setItem(
@@ -3833,15 +3947,19 @@ class DuckRaceGame {
     const corsProxyLeaderboardUrl = `https://corsproxy.io/?${encodeURIComponent(
       leaderboardUrl
     )}`;
-    fetch(corsProxyLeaderboardUrl)
-      .then((response) => response.json())
-      .then((data) => {
-        window.leaderboard = data.leaderboard || [];
-        this.updateOnlineLeaderboard();
-      })
-      .catch((error) => {
-        console.error("Error racer id:", error);
-      });
+
+    try {
+      const data = await this.cachedFetch(
+        corsProxyLeaderboardUrl,
+        {},
+        `leaderboard_${window.okey}_${window.rankedRacerId}`,
+        30000
+      );
+      window.leaderboard = data.leaderboard || [];
+      this.updateOnlineLeaderboard();
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+    }
   }
 
   updateOnlineLeaderboard() {
@@ -3950,6 +4068,20 @@ class DuckRaceGame {
   onRacerDataUpdated() {
     if (this.isRankedMode()) {
       this.updateRankedProfileButton();
+    }
+  }
+
+  // Update Manage button color based on manage mode
+  updateManageButtonColor() {
+    const manageBtn = document.getElementById("manageBtn");
+    if (!manageBtn) return;
+
+    if (this.manageMode === "discord") {
+      manageBtn.style.background = "#6c5ce7";
+      manageBtn.style.borderColor = "#4c3cc7";
+    } else {
+      manageBtn.style.background = "#228b22";
+      manageBtn.style.borderColor = "#1a6b1a";
     }
   }
 
@@ -4147,7 +4279,7 @@ class DuckRaceGame {
     return candidate;
   }
 
-  openManageDialog() {
+  async openManageDialog() {
     if (this.isRankedMode()) {
       alert("Manage Racers is available only in Casual mode.");
       return;
@@ -4157,13 +4289,19 @@ class DuckRaceGame {
     const container = document.getElementById("manageRacersContainer");
     if (!dialog || !container) return;
 
+    // Load saved manage mode
+    this.manageMode = localStorage.getItem("manageMode") || "casual";
+
     // Temp cache for pending images keyed by row key
     this.manageTemp = {};
 
     // Clear any previous pending additions
     this.pendingManageAdditions = [];
 
-    this.renderManageRacers();
+    // Set up manage mode toggle
+    this.setupManageModeToggle();
+
+    await this.renderManageRacers();
 
     if (typeof dialog.showModal === "function") {
       dialog.showModal();
@@ -4177,11 +4315,92 @@ class DuckRaceGame {
     });
   }
 
-  renderManageRacers() {
+  setupManageModeToggle() {
+    const toggle = document.getElementById("manageModeToggle");
+    if (!toggle) return;
+
+    // Initialize manage mode from saved or default
+    this.manageMode = this.manageMode || "casual";
+
+    // Check if Discord webhook is configured
+    const hasWebhook =
+      this.settings.discordWebhookUrl &&
+      this.settings.discordWebhookUrl.trim() !== "";
+
+    // Disable toggle if no webhook
+    toggle.disabled = !hasWebhook;
+
+    // Set initial state based on current mode
+    toggle.checked = this.manageMode === "discord";
+
+    // Update Manage button color initially
+    this.updateManageButtonColor();
+
+    // Add event listener
+    toggle.addEventListener("change", async () => {
+      this.manageMode = toggle.checked ? "discord" : "casual";
+      await this.renderManageRacers();
+    });
+  }
+
+  async renderManageRacers() {
     const container = document.getElementById("manageRacersContainer");
     if (!container) return;
 
-    const models = this.getManageModels();
+    let models = [];
+
+    console.log("this.manageMode", this.manageMode);
+
+    if (this.manageMode === "discord") {
+      // Discord mode: fetch members and create models
+      let discordMembers = null;
+      try {
+        discordMembers = await this.fetchDiscordMembers();
+
+        console.log("discordMembers", discordMembers);
+        if (discordMembers && discordMembers.members) {
+          models = await Promise.all(
+            discordMembers.members.map(async (member) => {
+              let color = this.generateRandomColor(); // default random
+              if (member.avatarUrl) {
+                console.log("Fetching color for", member.avatarUrl);
+                try {
+                  const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(
+                    member.avatarUrl
+                  )}`;
+                  color = await this.getAverageColor(proxiedUrl);
+                } catch (e) {
+                  console.warn(
+                    "Failed to get average color for",
+                    member.avatarUrl,
+                    e
+                  );
+                  color = this.generateRandomColor();
+                }
+              }
+              return {
+                key: `discord-${member.id}`,
+                type: "discord",
+                id: member.id,
+                name: member.nickname || member.username,
+                color: color,
+                profilePicture: member.avatarUrl || null,
+              };
+            })
+          );
+        } else {
+          // Fallback to empty list if no members
+          models = [];
+        }
+      } catch (error) {
+        console.error("Failed to fetch Discord members:", error);
+        this.log("❌ Failed to fetch Discord members", "skill");
+        models = [];
+      }
+    } else {
+      // Casual mode: use existing models
+      models = this.getManageModels();
+    }
 
     let html = `
       <div class="manage-table">
@@ -4190,15 +4409,23 @@ class DuckRaceGame {
     models.forEach((m) => {
       const hasPic = m.profilePicture && m.profilePicture.trim() !== "";
       const avatarStyle = hasPic
-        ? `background-image: url('${m.profilePicture}'); background-size: cover; background-position: center;`
+        ? `background-image: url('${m.profilePicture}'); background-size: cover; background-position: center; border: 2px solid ${m.color};`
         : `background-color: ${m.color};`;
       const initial = (m.name || "D")[0].toUpperCase();
+
+      // For Discord mode, disable editing except for color picker
+      const isDiscordMode = this.manageMode === "discord";
+      const inputDisabled = isDiscordMode ? "disabled" : "";
+      const colorDisabled = ""; // Allow color picker to be editable even in Discord mode
+      const deleteBtnStyle = isDiscordMode ? "display: none;" : "";
 
       html += `
         <div class="manage-row" data-key="${m.key}" data-type="${m.type}" ${
         m.type === "default"
           ? `data-index="${m.index}"`
-          : `data-custom-index="${m.customIndex}"`
+          : m.type === "custom"
+          ? `data-custom-index="${m.customIndex}"`
+          : ""
       }>
           <div class="cell avatar">
             <div
@@ -4222,96 +4449,105 @@ class DuckRaceGame {
               pattern="[A-Za-z0-9]{2,16}"
               minlength="2"
               maxlength="16"
+              ${inputDisabled}
               />
           </div>
           <div class="cell color">
-            <input type="color" id="manageColor-${m.key}" value="${m.color}">
+            <input type="color" id="manageColor-${m.key}" value="${
+        m.color
+      }" ${colorDisabled}>
           </div>
           <div class="cell actions">
             <button
               class="row-delete-btn"
               id="manageRowDelete-${m.key}"
               title="Mark for deletion"
+              style="${deleteBtnStyle}"
             >✖</button>
           </div>
         </div>
       `;
     });
 
-    // New row for adding racer
-    const newColorHex = window.rgbToHex(this.generateUniqueColor());
-    html += `
-      <div class="manage-row add-row">
-        <div class="cell avatar">
-          <div
-            class="avatar-circle"
-            id="managePreview-new"
-            style="background-color: ${newColorHex};"
-            onclick="document.getElementById('manageFile-new').click()"
-            title="Click to add picture"
-          ></div>
-          <input type="file" accept="image/*" id="manageFile-new" style="display:none" />
+    // New row for adding racer (only in casual mode)
+    if (this.manageMode !== "discord") {
+      const newColorHex = window.rgbToHex(this.generateUniqueColor());
+      html += `
+        <div class="manage-row add-row">
+          <div class="cell avatar">
+            <div
+              class="avatar-circle"
+              id="managePreview-new"
+              style="background-color: ${newColorHex};"
+              onclick="document.getElementById('manageFile-new').click()"
+              title="Click to add picture"
+            ></div>
+            <input type="file" accept="image/*" id="manageFile-new" style="display:none" />
+          </div>
+          <div class="cell name">
+            <input type="text"
+              id="manageName-new"
+              value=""
+              placeholder="New duck name"
+              pattern="[A-Za-z0-9]{2,16}"
+              minlength="2"
+              maxlength="16"
+              />
+          </div>
+          <div class="cell color">
+            <input type="color" id="manageColor-new" value="${newColorHex}">
+          </div>
+          <div class="cell actions">
+            <button
+              class="row-add-btn"
+              id="manageRowAdd-new"
+              title="Add new racer"
+            >+</button>
+          </div>
         </div>
-        <div class="cell name">
-          <input type="text"
-            id="manageName-new"
-            value=""
-            placeholder="New duck name"
-            pattern="[A-Za-z0-9]{2,16}"
-            minlength="2"
-            maxlength="16"
-            />
-        </div>
-        <div class="cell color">
-          <input type="color" id="manageColor-new" value="${newColorHex}">
-        </div>
-        <div class="cell actions">
-          <button
-            class="row-add-btn"
-            id="manageRowAdd-new"
-            title="Add new racer"
-          >+</button>
-        </div>
-      </div>
-      </div>
-    `;
+      `;
+    }
+
+    html += `</div>`;
 
     container.innerHTML = html;
 
-    // Bind events for existing rows
-    models.forEach((m) => {
-      const key = m.key;
+    // Bind events for existing rows (only in casual mode)
+    if (this.manageMode !== "discord") {
+      models.forEach((m) => {
+        const key = m.key;
 
-      // File change
-      const fileInput = document.getElementById(`manageFile-${key}`);
-      if (fileInput) {
-        fileInput.addEventListener("change", async (e) => {
-          const file = e.target.files && e.target.files[0];
-          if (!file || !file.type.startsWith("image/")) return;
-          try {
-            const base64 = await this.resizeImageFileToBase64(file);
-            this.manageTemp[key] = this.manageTemp[key] || {};
-            this.manageTemp[key].imageData = base64;
+        // File change
+        const fileInput = document.getElementById(`manageFile-${key}`);
+        if (fileInput) {
+          fileInput.addEventListener("change", async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file || !file.type.startsWith("image/")) return;
+            try {
+              const base64 = await this.resizeImageFileToBase64(file);
+              this.manageTemp[key] = this.manageTemp[key] || {};
+              this.manageTemp[key].imageData = base64;
 
-            const preview = document.getElementById(`managePreview-${key}`);
-            if (preview) {
-              preview.style.backgroundImage = `url('${base64}')`;
-              preview.style.backgroundSize = "cover";
-              preview.style.backgroundPosition = "center";
-              // Remove initial if present
-              const initialEl = preview.querySelector(".avatar-initial");
-              if (initialEl) initialEl.remove();
+              const preview = document.getElementById(`managePreview-${key}`);
+              if (preview) {
+                preview.style.backgroundImage = `url('${base64}')`;
+                preview.style.backgroundSize = "cover";
+                preview.style.backgroundPosition = "center";
+                // Remove initial if present
+                const initialEl = preview.querySelector(".avatar-initial");
+                if (initialEl) initialEl.remove();
+              }
+            } catch (err) {
+              console.error("Image processing error:", err);
             }
-          } catch (err) {
-            console.error("Image processing error:", err);
-          }
-        });
-      }
+          });
+        }
 
-      // per-row Save removed; using global Update button
+        // per-row Save removed; using global Update button
 
-      // per-row Delete removed; using global Update button
-    });
+        // per-row Delete removed; using global Update button
+      });
+    }
 
     // Bind events for add row
     const newFileInput = document.getElementById("manageFile-new");
@@ -4595,35 +4831,37 @@ class DuckRaceGame {
     // Insert inside the manage-table
     manageTable.insertAdjacentHTML("beforeend", newRowHtml);
 
-    // Bind events for the new add-row
-    const newFileInput = document.getElementById("manageFile-new");
-    if (newFileInput) {
-      newFileInput.addEventListener("change", async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file || !file.type.startsWith("image/")) return;
-        try {
-          const base64 = await this.resizeImageFileToBase64(file);
-          this.manageTemp["new"] = { imageData: base64 };
-          const preview = document.getElementById("managePreview-new");
-          if (preview) {
-            preview.style.backgroundImage = `url('${base64}')`;
-            preview.style.backgroundSize = "cover";
-            preview.style.backgroundPosition = "center";
-            const initialEl = preview.querySelector(".avatar-initial");
-            if (initialEl) initialEl.remove();
+    // Bind events for the new add-row (only in casual mode)
+    if (this.manageMode !== "discord") {
+      const newFileInput = document.getElementById("manageFile-new");
+      if (newFileInput) {
+        newFileInput.addEventListener("change", async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file || !file.type.startsWith("image/")) return;
+          try {
+            const base64 = await this.resizeImageFileToBase64(file);
+            this.manageTemp["new"] = { imageData: base64 };
+            const preview = document.getElementById("managePreview-new");
+            if (preview) {
+              preview.style.backgroundImage = `url('${base64}')`;
+              preview.style.backgroundSize = "cover";
+              preview.style.backgroundPosition = "center";
+              const initialEl = preview.querySelector(".avatar-initial");
+              if (initialEl) initialEl.remove();
+            }
+          } catch (err) {
+            console.error("Image processing error:", err);
           }
-        } catch (err) {
-          console.error("Image processing error:", err);
-        }
+        });
+      }
+
+      const newAddBtn = document.getElementById("manageRowAdd-new");
+
+      this.addEventListenerToElement(newAddBtn, "click", (e) => {
+        e.preventDefault();
+        this.addPendingRacerFromDialog();
       });
     }
-
-    const newAddBtn = document.getElementById("manageRowAdd-new");
-
-    this.addEventListenerToElement(newAddBtn, "click", (e) => {
-      e.preventDefault();
-      this.addPendingRacerFromDialog();
-    });
   }
 
   addEventListenerToElement(element, event, handler) {
@@ -4815,7 +5053,7 @@ class DuckRaceGame {
   }
 
   // Apply all edits in the Manage dialog in one shot
-  applyManageUpdate() {
+  async applyManageUpdate() {
     if (this.isRankedMode()) {
       alert("Manage is available only in Casual mode.");
       return;
@@ -5067,11 +5305,102 @@ class DuckRaceGame {
       }
     }, 100); // Small delay to ensure DOM is updated
 
+    // Persist the manage mode and update button color
+    localStorage.setItem("manageMode", this.manageMode);
+    this.updateManageButtonColor();
+
+    // Update manage button image (fetch Discord logo if needed)
+    if (this.manageMode === "discord") {
+      try {
+        const discordData = await this.fetchDiscordMembers();
+        this.discordServerLogo =
+          discordData.serverLogoUrl || "discord-icon.png";
+      } catch (error) {
+        console.error("Failed to fetch Discord server logo:", error);
+        this.discordServerLogo = "discord-icon.png";
+      }
+    }
+    await this.updateManageButtonImage();
+
     // Close the dialog to signal that editing is done
     const dialog = document.getElementById("manageDialog");
     if (dialog && typeof dialog.close === "function") {
       dialog.close();
     }
+  }
+
+  async updateManageButtonImage() {
+    const manageBtn = document.getElementById("manageBtn");
+    if (!manageBtn) return;
+
+    if (this.manageMode === "discord") {
+      if (!this.discordServerLogo) {
+        try {
+          const discordData = await this.fetchDiscordMembers();
+          this.discordServerLogo = discordData.serverLogoUrl || null;
+        } catch (error) {
+          console.error("Failed to fetch Discord server logo:", error);
+          this.discordServerLogo = null;
+        }
+      }
+
+      // If serverLogoUrl is null, use the official Discord logo
+      if (!this.discordServerLogo) {
+        this.discordServerLogo = "discord-icon.png";
+      }
+
+      if (this.discordServerLogo) {
+        manageBtn.innerHTML = `<img src="${this.discordServerLogo}" alt="Discord Logo" style="width: 20px; height: 20px; margin-right: 5px; vertical-align: middle;">Manage`;
+      } else {
+        manageBtn.innerHTML = "Manage";
+      }
+    } else {
+      manageBtn.innerHTML = "Manage";
+    }
+  }
+
+  // Caching utility for API responses
+  async cachedFetch(url, options = {}, cacheKey = null, cacheDuration = 30000) {
+    const key = cacheKey || `cache_${btoa(url).replace(/[^a-zA-Z0-9]/g, "_")}`;
+    const now = Date.now();
+
+    // Check for cached data
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        if (now - timestamp < cacheDuration) {
+          console.log(`Using cached data for ${url}`);
+          return data;
+        }
+      } catch (e) {
+        console.warn("Failed to parse cached data:", e);
+      }
+    }
+
+    // Fetch new data
+    console.log(`Fetching fresh data for ${url}`);
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Cache the data
+    try {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          data,
+          timestamp: now,
+        })
+      );
+    } catch (e) {
+      console.warn("Failed to cache data:", e);
+    }
+
+    return data;
   }
 
   async fetchDiscordMembers() {
@@ -5084,13 +5413,12 @@ class DuckRaceGame {
     let webhookToken = null;
 
     try {
-      const response = await fetch(discordWebhookUrl);
-      if (!response.ok) {
-        console.error(response);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const jsonResponse = await response.json();
+      const jsonResponse = await this.cachedFetch(
+        discordWebhookUrl,
+        {},
+        "discord_webhook_info",
+        30000
+      );
 
       webhookId = jsonResponse.id;
       webhookToken = jsonResponse.token;
@@ -5111,13 +5439,12 @@ class DuckRaceGame {
       const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
         apiUrl
       )}`;
-      const response = await fetch(corsProxyUrl);
-      if (!response.ok) {
-        console.error(response);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      jsonResponse = await response.json();
+      jsonResponse = await this.cachedFetch(
+        corsProxyUrl,
+        {},
+        `discord_members_${webhookId}`,
+        30000
+      );
     } catch (error) {
       console.error("Error fetching Discord members:", error);
       throw error;
@@ -5141,8 +5468,13 @@ window.importProfile = async () => {
       fetchProfileUrl
     )}`;
 
-    const response = await fetch(corsProxyFetchProfileUrlUrl);
-    const jsonResponse = await response.json();
+    // Use caching for profile import
+    const jsonResponse = await window.game.cachedFetch(
+      corsProxyFetchProfileUrlUrl,
+      {},
+      `fetch_profile_${okeyValue}`,
+      30000
+    );
 
     window.localStorage.setItem("rankedRacerId", jsonResponse.id);
     window.localStorage.setItem("rankedRacerName", jsonResponse.name);
