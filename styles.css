@@ -109,6 +109,10 @@ body:before {
   cursor: not-allowed;
 }
 
+.manage-btn {
+  margin-right: 10px;
+}
+
 /* Race Mode Toggle Slider */
 .race-mode-toggle {
   margin-right: 10px;
@@ -325,7 +329,7 @@ body:before {
   align-items: center;
   padding: 20px;
   position: relative;
-  min-height: fit-content;
+  min-height: min-content;
 }
 
 /* Ranked Profile Button Styles */
@@ -1606,10 +1610,7 @@ input[type="range"]:hover {
 
 .manage-row[data-type="temp"] {
   border-color: #9acd32;
-}
-
-.manage-row[data-type="temp"] .avatar-circle {
-  border-color: #9acd32;
+  background: #e9ffbc;
 }
 
 .manage-row .cell {

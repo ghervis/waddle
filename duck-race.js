@@ -1394,13 +1394,23 @@ class DuckRaceGame {
     const racerConfigs = [];
 
     // Add the 5 default/customizable racers
+    const defaultPalette = [
+      "#FFD700",
+      "#FF6347",
+      "#32CD32",
+      "#1E90FF",
+      "#DA70D6",
+    ];
     for (let i = 0; i < 5; i++) {
-      racerConfigs.push({
-        id: i,
-        name: this.customRacerNames[i] || `Duck${i + 1}`,
-        color: this.customRacerColors[i],
-        profilePicture: this.customRacerProfilePictures[i] || null,
-      });
+      const name = this.customRacerNames[i];
+      if (name && name.trim() !== "") {
+        racerConfigs.push({
+          id: i,
+          name: name,
+          color: this.customRacerColors[i] || defaultPalette[i],
+          profilePicture: this.customRacerProfilePictures[i] || null,
+        });
+      }
     }
 
     // Add additional custom racers
@@ -4066,16 +4076,26 @@ class DuckRaceGame {
     if (this.isRankedMode()) return models;
 
     // Defaults (0..4)
+    const defaultPalette = [
+      "#FFD700",
+      "#FF6347",
+      "#32CD32",
+      "#1E90FF",
+      "#DA70D6",
+    ];
     for (let i = 0; i < 5; i++) {
-      models.push({
-        key: `d-${i}`,
-        type: "default",
-        index: i,
-        id: i,
-        name: this.customRacerNames[i] || `Duck${i + 1}`,
-        color: this.customRacerColors[i],
-        profilePicture: this.customRacerProfilePictures[i] || null,
-      });
+      const name = this.customRacerNames[i];
+      if (name && name.trim() !== "") {
+        models.push({
+          key: `d-${i}`,
+          type: "default",
+          index: i,
+          id: i,
+          name: name,
+          color: this.customRacerColors[i] || defaultPalette[i],
+          profilePicture: this.customRacerProfilePictures[i] || null,
+        });
+      }
     }
 
     // Custom racers
@@ -4324,7 +4344,8 @@ class DuckRaceGame {
       const keyAttr = idAttr.startsWith(prefix)
         ? idAttr.substring(prefix.length)
         : null;
-      btn.addEventListener("click", (e) => {
+
+      this.addEventListenerToElement(btn, "click", (e) => {
         e.preventDefault();
         if (keyAttr) {
           this.toggleManageDelete(keyAttr);
@@ -4334,12 +4355,11 @@ class DuckRaceGame {
 
     // Bind add button programmatically
     const addBtn = document.getElementById("manageRowAdd-new");
-    if (addBtn) {
-      addBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        this.addPendingRacerFromDialog();
-      });
-    }
+
+    this.addEventListenerToElement(addBtn, "click", (e) => {
+      e.preventDefault();
+      this.addPendingRacerFromDialog();
+    });
   }
 
   toggleManageDelete(key) {
@@ -4432,19 +4452,18 @@ class DuckRaceGame {
 
     // Delete button event
     const deleteBtn = document.getElementById(`manageRowDelete-${key}`);
-    if (deleteBtn) {
-      deleteBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const row = document.querySelector(`.manage-row[data-key="${key}"]`);
-        if (row) {
-          row.remove();
-          // Clean up temp data
-          if (this.manageTemp && this.manageTemp[key]) {
-            delete this.manageTemp[key];
-          }
+
+    this.addEventListenerToElement(deleteBtn, "click", (e) => {
+      e.preventDefault();
+      const row = document.querySelector(`.manage-row[data-key="${key}"]`);
+      if (row) {
+        row.remove();
+        // Clean up temp data
+        if (this.manageTemp && this.manageTemp[key]) {
+          delete this.manageTemp[key];
         }
-      });
-    }
+      }
+    });
   }
 
   addPendingRacerFromDialog() {
@@ -4456,6 +4475,8 @@ class DuckRaceGame {
     const color = colorInput ? colorInput.value : "#FFD700";
     const imageData =
       (this.manageTemp["new"] && this.manageTemp["new"].imageData) || null;
+
+    console.log("addPendingRacerFromDialog", rawName, nameInput);
 
     if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
       alert("Name must be 2-16 alphanumeric characters.");
@@ -4598,12 +4619,26 @@ class DuckRaceGame {
     }
 
     const newAddBtn = document.getElementById("manageRowAdd-new");
-    if (newAddBtn) {
-      newAddBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        this.addPendingRacerFromDialog();
-      });
+
+    this.addEventListenerToElement(newAddBtn, "click", (e) => {
+      e.preventDefault();
+      this.addPendingRacerFromDialog();
+    });
+  }
+
+  addEventListenerToElement(element, event, handler) {
+    if (!element) {
+      return;
     }
+
+    if (element.clickEventListenerFn) {
+      element.removeEventListener(event, element.clickEventListenerFn);
+      element.clickEventListenerFn = null;
+    }
+
+    element.clickEventListenerFn = handler;
+
+    element.addEventListener(event, handler);
   }
 
   applyManageSave(model) {
@@ -4700,7 +4735,7 @@ class DuckRaceGame {
     }
 
     if (model.type === "default") {
-      if (!confirm(`Reset default racer slot #${model.index + 1}?`)) return;
+      if (!confirm(`Delete default racer slot #${model.index + 1}?`)) return;
 
       // Reset to default values
       const defaults = ["#FFD700", "#FF6347", "#32CD32", "#1E90FF", "#DA70D6"];
@@ -4785,6 +4820,7 @@ class DuckRaceGame {
       alert("Manage is available only in Casual mode.");
       return;
     }
+
     const container = document.getElementById("manageRacersContainer");
     if (!container) return;
 
@@ -4892,34 +4928,34 @@ class DuckRaceGame {
     }
 
     // Handle add-row (new)
-    const newNameEl = document.getElementById("manageName-new");
-    const newColorEl = document.getElementById("manageColor-new");
-    if (newNameEl && newColorEl) {
-      const rawName = newNameEl.value.trim();
-      if (rawName.length > 0) {
-        if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
-          alert("New duck name must be 2-16 alphanumeric characters.");
-          newNameEl.focus();
-          return;
-        }
-        const uniqueName = ensureUniqueInSet(rawName);
-        const color = newColorEl.value || "#FFD700";
-        const picture =
-          (this.manageTemp &&
-            this.manageTemp["new"] &&
-            this.manageTemp["new"].imageData) ||
-          null;
+    // const newNameEl = document.getElementById("manageName-new");
+    // const newColorEl = document.getElementById("manageColor-new");
+    // if (newNameEl && newColorEl) {
+    //   const rawName = newNameEl.value.trim();
+    //   if (rawName.length > 0) {
+    //     if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
+    //       alert("New duck name must be 2-16 alphanumeric characters.");
+    //       newNameEl.focus();
+    //       return;
+    //     }
+    //     const uniqueName = ensureUniqueInSet(rawName);
+    //     const color = newColorEl.value || "#FFD700";
+    //     const picture =
+    //       (this.manageTemp &&
+    //         this.manageTemp["new"] &&
+    //         this.manageTemp["new"].imageData) ||
+    //       null;
 
-        // Push without calling addRacer (we will rebuild once at the end)
-        const newRacer = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          name: uniqueName,
-          color,
-          profilePicture: picture,
-        };
-        this.customRacers.push(newRacer);
-      }
-    }
+    //     // Push without calling addRacer (we will rebuild once at the end)
+    //     const newRacer = {
+    //       id: Date.now() + Math.floor(Math.random() * 1000),
+    //       name: uniqueName,
+    //       color,
+    //       profilePicture: picture,
+    //     };
+    //     this.customRacers.push(newRacer);
+    //   }
+    // }
 
     // Handle dynamic temp rows
     const tempRows = Array.from(
@@ -4965,9 +5001,8 @@ class DuckRaceGame {
     // Apply default resets
     if (defaultResets.length > 0) {
       defaultResets.forEach((idx) => {
-        const resetName = ensureUniqueInSet(this.getRandomDuckName());
-        this.customRacerNames[idx] = resetName;
-        this.customRacerColors[idx] = defaultPalette[idx] || "#FFD700";
+        this.customRacerNames[idx] = null;
+        this.customRacerColors[idx] = null;
         this.customRacerProfilePictures[idx] = null;
       });
       localStorage.setItem(
@@ -5012,20 +5047,6 @@ class DuckRaceGame {
         this.customRacers[customIndex].profilePicture = picture;
       }
     });
-
-    // Process pending additions from manage dialog
-    if (this.pendingManageAdditions.length > 0) {
-      this.pendingManageAdditions.forEach((pending) => {
-        const newRacer = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          name: pending.name,
-          color: pending.color,
-          profilePicture: pending.profilePicture,
-        };
-        this.customRacers.push(newRacer);
-      });
-      this.pendingManageAdditions = []; // Clear pending additions
-    }
 
     // Persist customs
     this.saveCustomRacers();
