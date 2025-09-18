@@ -1883,6 +1883,24 @@ input[type="range"]:hover {
   box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.15);
 }
 
+/* Hidden racer styling for Discord mode */
+.manage-row.hidden-racer div.cell {
+  &.avatar,
+  &.name,
+  &.color {
+    opacity: 0.5;
+    filter: grayscale(0.3);
+  }
+}
+
+.manage-row.hidden-racer .avatar-circle {
+  border-color: #666;
+}
+
+.manage-row.hidden-racer .duck-name {
+  color: #999;
+}
+
 /* Small per-row delete button pinned to upper-right of the row */
 .row-delete-btn {
   /* position: absolute; */
@@ -1918,6 +1936,46 @@ input[type="range"]:hover {
   justify-content: center;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Eye button styling for Discord mode - minimal SVG button */
+.row-eye-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+.row-eye-btn:hover {
+  transform: scale(1.1);
+  background: rgba(88, 101, 242, 0.1);
+}
+
+.row-eye-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: #5865f2;
+  transition: stroke 0.15s ease, opacity 0.15s ease;
+}
+
+.row-eye-btn:hover svg {
+  stroke: #4752c4;
+}
+
+.row-eye-btn.hidden svg {
+  stroke: #999;
+  opacity: 0.6;
+}
+
+.row-eye-btn.hidden:hover svg {
+  stroke: #666;
 }
 
 .row-add-btn:hover {

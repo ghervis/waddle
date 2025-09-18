@@ -92,6 +92,11 @@ class DuckRaceGame {
     // Track pending additions in manage dialog
     this.pendingManageAdditions = [];
 
+    // Track hidden Discord racers
+    this.hiddenDiscordRacers = new Set(
+      JSON.parse(localStorage.getItem("hiddenDiscordRacers") || "[]")
+    );
+
     this.initializeAsync();
     this.initializeRankedProfileButton();
     this.draw();
@@ -1035,6 +1040,13 @@ class DuckRaceGame {
     localStorage.setItem("duckRaceSettings", JSON.stringify(this.settings));
   }
 
+  saveHiddenDiscordRacers() {
+    localStorage.setItem(
+      "hiddenDiscordRacers",
+      JSON.stringify([...this.hiddenDiscordRacers])
+    );
+  }
+
   saveMasterVolumeSettings() {
     localStorage.setItem("volumeMuted", this.masterMuted);
     localStorage.setItem("musicVolume", this.musicVolume);
@@ -1382,7 +1394,7 @@ class DuckRaceGame {
     dialog.close();
   }
 
-  async updateRacersList() {
+  async updateRacersList(noCache = false) {
     if (this.isRankedMode()) {
       // Ranked mode: Use only ranked racer data
       const racerConfigs = [
@@ -1411,11 +1423,16 @@ class DuckRaceGame {
 
       // Fetch Discord members and convert to racer configs
       try {
-        const discordMembers = await this.fetchDiscordMembers();
+        const discordMembers = await this.fetchDiscordMembers(noCache);
         if (discordMembers && discordMembers.members) {
+          // Filter out hidden Discord racers
+          const visibleMembers = discordMembers.members.filter(
+            (member) => !this.hiddenDiscordRacers.has(member.id)
+          );
+
           racerConfigs.push(
             ...(await Promise.all(
-              discordMembers.members.map(async (member) => {
+              visibleMembers.map(async (member) => {
                 let color = this.generateRandomColor(); // default random
                 if (member.avatarUrl) {
                   try {
@@ -1531,6 +1548,27 @@ class DuckRaceGame {
 
   async getAverageColor(imageUrl) {
     console.log("get average color for", imageUrl);
+
+    // Check cache first
+    const cacheKey = `avg_color_${btoa(imageUrl).replace(
+      /[^a-zA-Z0-9]/g,
+      "_"
+    )}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const { color, timestamp } = JSON.parse(cached);
+        const cacheAge = Date.now() - timestamp;
+        // Cache for 24 hours (86400000 ms)
+        if (cacheAge < 86400000) {
+          console.log("Using cached average color for", imageUrl, ":", color);
+          return color;
+        }
+      } catch (e) {
+        console.warn("Failed to parse cached color data:", e);
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -1553,18 +1591,42 @@ class DuckRaceGame {
           count++;
         }
         if (count === 0) {
-          resolve(this.generateRandomColor());
+          const randomColor = this.generateRandomColor();
+          resolve(randomColor);
           return;
         }
         r = Math.floor(r / count);
         g = Math.floor(g / count);
         b = Math.floor(b / count);
 
-        console.log("average color:", r, g, b);
-        resolve(this.rgbToHex(r, g, b));
+        const calculatedColor = this.rgbToHex(r, g, b);
+        console.log(
+          "calculated average color:",
+          r,
+          g,
+          b,
+          "->",
+          calculatedColor
+        );
+
+        // Cache the result
+        try {
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              color: calculatedColor,
+              timestamp: Date.now(),
+            })
+          );
+        } catch (e) {
+          console.warn("Failed to cache color data:", e);
+        }
+
+        resolve(calculatedColor);
       };
       img.onerror = () => {
-        resolve(this.generateRandomColor());
+        const randomColor = this.generateRandomColor();
+        resolve(randomColor);
       };
       img.src = imageUrl;
     });
@@ -3665,7 +3727,7 @@ class DuckRaceGame {
 
       // Compute correct racerId for edit/remove
       let racerId;
-      if (this.isRankedMode()) {
+      if (this.isRankedMode() || this.manageMode === "discord") {
         racerId = duck.id;
       } else if (index >= 5) {
         const customIndex = index - 5;
@@ -4298,6 +4360,9 @@ class DuckRaceGame {
     // Clear any previous pending additions
     this.pendingManageAdditions = [];
 
+    // Initialize pending hidden toggles
+    this.pendingHiddenToggles = new Set();
+
     // Set up manage mode toggle
     this.setupManageModeToggle();
 
@@ -4312,6 +4377,7 @@ class DuckRaceGame {
     // Clear pending additions when dialog is closed without applying
     dialog.addEventListener("close", () => {
       this.pendingManageAdditions = [];
+      this.pendingHiddenToggles.clear();
     });
   }
 
@@ -4359,35 +4425,44 @@ class DuckRaceGame {
 
         console.log("discordMembers", discordMembers);
         if (discordMembers && discordMembers.members) {
-          models = await Promise.all(
-            discordMembers.members.map(async (member) => {
-              let color = this.generateRandomColor(); // default random
-              if (member.avatarUrl) {
-                console.log("Fetching color for", member.avatarUrl);
-                try {
-                  const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(
-                    member.avatarUrl
-                  )}`;
-                  color = await this.getAverageColor(proxiedUrl);
-                } catch (e) {
-                  console.warn(
-                    "Failed to get average color for",
-                    member.avatarUrl,
-                    e
-                  );
-                  color = this.generateRandomColor();
-                }
+          models = [];
+          // On first Discord fetch, hide all members except the first 10 to reduce HTTP calls
+          if (
+            this.hiddenDiscordRacers.size === 0 &&
+            discordMembers.members.length > 10
+          ) {
+            discordMembers.members.slice(10).forEach((member) => {
+              this.hiddenDiscordRacers.add(member.id);
+            });
+            this.saveHiddenDiscordRacers();
+          }
+          for (const member of discordMembers.members) {
+            const isHidden = this.hiddenDiscordRacers.has(member.id);
+            let color = this.generateRandomColor(); // default random
+            if (!isHidden && member.avatarUrl) {
+              try {
+                const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(
+                  member.avatarUrl
+                )}`;
+                color = await this.getAverageColor(proxiedUrl);
+              } catch (e) {
+                console.warn(
+                  "Failed to get average color for",
+                  member.avatarUrl,
+                  e
+                );
+                color = this.generateRandomColor();
               }
-              return {
-                key: `discord-${member.id}`,
-                type: "discord",
-                id: member.id,
-                name: member.nickname || member.username,
-                color: color,
-                profilePicture: member.avatarUrl || null,
-              };
-            })
-          );
+            }
+            models.push({
+              key: `discord-${member.id}`,
+              type: "discord",
+              id: member.id,
+              name: member.nickname || member.username,
+              color: color,
+              profilePicture: member.avatarUrl || null,
+            });
+          }
         } else {
           // Fallback to empty list if no members
           models = [];
@@ -4407,20 +4482,36 @@ class DuckRaceGame {
     `;
 
     models.forEach((m) => {
-      const hasPic = m.profilePicture && m.profilePicture.trim() !== "";
+      // For Discord mode, disable editing except for color picker
+      const isDiscordMode = this.manageMode === "discord";
+      const inputDisabled = isDiscordMode ? "disabled" : "";
+      const colorDisabled = ""; // Allow color picker to be editable even in Discord mode
+      const isHidden =
+        isDiscordMode &&
+        (this.hiddenDiscordRacers.has(m.id)
+          ? !this.pendingHiddenToggles.has(m.id)
+          : this.pendingHiddenToggles.has(m.id));
+      const hasPic =
+        !isHidden && m.profilePicture && m.profilePicture.trim() !== "";
       const avatarStyle = hasPic
         ? `background-image: url('${m.profilePicture}'); background-size: cover; background-position: center; border: 2px solid ${m.color};`
         : `background-color: ${m.color};`;
       const initial = (m.name || "D")[0].toUpperCase();
 
-      // For Discord mode, disable editing except for color picker
-      const isDiscordMode = this.manageMode === "discord";
-      const inputDisabled = isDiscordMode ? "disabled" : "";
-      const colorDisabled = ""; // Allow color picker to be editable even in Discord mode
-      const deleteBtnStyle = isDiscordMode ? "display: none;" : "";
+      const eyeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>`;
+      const slashedEyeIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4l16 16"></path></svg>`;
+      const actionsContent = isDiscordMode
+        ? `<button class="row-eye-btn ${
+            isHidden ? "hidden" : ""
+          }" id="manageRowEye-${m.key}" title="Toggle visibility">${
+            isHidden ? slashedEyeIconSvg : eyeIconSvg
+          }</button>`
+        : `<button class="row-delete-btn" id="manageRowDelete-${m.key}" title="Mark for deletion">✖</button>`;
 
       html += `
-        <div class="manage-row" data-key="${m.key}" data-type="${m.type}" ${
+        <div class="manage-row ${isHidden ? "hidden-racer" : ""}" data-key="${
+        m.key
+      }" data-type="${m.type}" ${
         m.type === "default"
           ? `data-index="${m.index}"`
           : m.type === "custom"
@@ -4458,12 +4549,7 @@ class DuckRaceGame {
       }" ${colorDisabled}>
           </div>
           <div class="cell actions">
-            <button
-              class="row-delete-btn"
-              id="manageRowDelete-${m.key}"
-              title="Mark for deletion"
-              style="${deleteBtnStyle}"
-            >✖</button>
+            ${actionsContent}
           </div>
         </div>
       `;
@@ -4589,6 +4675,23 @@ class DuckRaceGame {
       });
     });
 
+    // Bind eye buttons programmatically for Discord mode
+    const eyeBtns = container.querySelectorAll(".row-eye-btn");
+    eyeBtns.forEach((btn) => {
+      const idAttr = btn.id || "";
+      const prefix = "manageRowEye-";
+      const keyAttr = idAttr.startsWith(prefix)
+        ? idAttr.substring(prefix.length)
+        : null;
+
+      this.addEventListenerToElement(btn, "click", (e) => {
+        e.preventDefault();
+        if (keyAttr) {
+          this.toggleDiscordRacerVisibility(keyAttr);
+        }
+      });
+    });
+
     // Bind add button programmatically
     const addBtn = document.getElementById("manageRowAdd-new");
 
@@ -4603,6 +4706,16 @@ class DuckRaceGame {
     if (!row) return;
     const p = row.classList.toggle("pending-delete");
     row.dataset.delete = p ? "1" : "0";
+  }
+
+  toggleDiscordRacerVisibility(key) {
+    const id = key.split("-")[1]; // Extract member id from key like "discord-123"
+    if (this.pendingHiddenToggles.has(id)) {
+      this.pendingHiddenToggles.delete(id);
+    } else {
+      this.pendingHiddenToggles.add(id);
+    }
+    this.renderManageRacers();
   }
 
   addNewManageRow() {
@@ -5293,7 +5406,7 @@ class DuckRaceGame {
     this.manageTemp = {};
 
     // Rebuild view and UI once
-    this.updateRacersList();
+    this.updateRacersList(true);
     this.updateLeaderboard();
     this.draw();
 
@@ -5321,6 +5434,17 @@ class DuckRaceGame {
       }
     }
     await this.updateManageButtonImage();
+
+    // Apply pending hidden toggles
+    this.pendingHiddenToggles.forEach((id) => {
+      if (this.hiddenDiscordRacers.has(id)) {
+        this.hiddenDiscordRacers.delete(id);
+      } else {
+        this.hiddenDiscordRacers.add(id);
+      }
+    });
+    this.saveHiddenDiscordRacers();
+    this.pendingHiddenToggles.clear();
 
     // Close the dialog to signal that editing is done
     const dialog = document.getElementById("manageDialog");
@@ -5403,7 +5527,7 @@ class DuckRaceGame {
     return data;
   }
 
-  async fetchDiscordMembers() {
+  async fetchDiscordMembers(noCache = false) {
     const discordWebhookUrl = this.settings.discordWebhookUrl;
     if (!discordWebhookUrl || discordWebhookUrl.trim() === "") {
       return;
@@ -5417,7 +5541,7 @@ class DuckRaceGame {
         discordWebhookUrl,
         {},
         "discord_webhook_info",
-        30000
+        noCache ? 0 : 30000
       );
 
       webhookId = jsonResponse.id;
@@ -5443,7 +5567,7 @@ class DuckRaceGame {
         corsProxyUrl,
         {},
         `discord_members_${webhookId}`,
-        30000
+        noCache ? 0 : 30000
       );
     } catch (error) {
       console.error("Error fetching Discord members:", error);
