@@ -1547,8 +1547,6 @@ class DuckRaceGame {
   }
 
   async getAverageColor(imageUrl) {
-    console.log("get average color for", imageUrl);
-
     // Check cache first
     const cacheKey = `avg_color_${btoa(imageUrl).replace(
       /[^a-zA-Z0-9]/g,
@@ -1561,7 +1559,6 @@ class DuckRaceGame {
         const cacheAge = Date.now() - timestamp;
         // Cache for 24 hours (86400000 ms)
         if (cacheAge < 86400000) {
-          console.log("Using cached average color for", imageUrl, ":", color);
           return color;
         }
       } catch (e) {
@@ -1600,14 +1597,6 @@ class DuckRaceGame {
         b = Math.floor(b / count);
 
         const calculatedColor = this.rgbToHex(r, g, b);
-        console.log(
-          "calculated average color:",
-          r,
-          g,
-          b,
-          "->",
-          calculatedColor
-        );
 
         // Cache the result
         try {
@@ -4415,15 +4404,12 @@ class DuckRaceGame {
 
     let models = [];
 
-    console.log("this.manageMode", this.manageMode);
-
     if (this.manageMode === "discord") {
       // Discord mode: fetch members and create models
       let discordMembers = null;
       try {
         discordMembers = await this.fetchDiscordMembers();
 
-        console.log("discordMembers", discordMembers);
         if (discordMembers && discordMembers.members) {
           models = [];
           // On first Discord fetch, hide all members except the first 10 to reduce HTTP calls
@@ -4824,8 +4810,6 @@ class DuckRaceGame {
     const color = colorInput ? colorInput.value : "#FFD700";
     const imageData =
       (this.manageTemp["new"] && this.manageTemp["new"].imageData) || null;
-
-    console.log("addPendingRacerFromDialog", rawName, nameInput);
 
     if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
       alert("Name must be 2-16 alphanumeric characters.");
@@ -5494,7 +5478,6 @@ class DuckRaceGame {
       try {
         const { data, timestamp } = JSON.parse(cached);
         if (now - timestamp < cacheDuration) {
-          console.log(`Using cached data for ${url}`);
           return data;
         }
       } catch (e) {
@@ -5503,7 +5486,6 @@ class DuckRaceGame {
     }
 
     // Fetch new data
-    console.log(`Fetching fresh data for ${url}`);
     const response = await fetch(url, options);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
