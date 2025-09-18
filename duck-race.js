@@ -5073,6 +5073,60 @@ class DuckRaceGame {
       dialog.close();
     }
   }
+
+  async fetchDiscordMembers() {
+    const discordWebhookUrl = this.settings.discordWebhookUrl;
+    if (!discordWebhookUrl || discordWebhookUrl.trim() === "") {
+      return;
+    }
+
+    let webhookId = null;
+    let webhookToken = null;
+
+    try {
+      const response = await fetch(discordWebhookUrl);
+      if (!response.ok) {
+        console.error(response);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const jsonResponse = await response.json();
+
+      webhookId = jsonResponse.id;
+      webhookToken = jsonResponse.token;
+    } catch (error) {
+      console.error("Error fetching Discord members:", error);
+      throw error;
+    }
+
+    if (!webhookId || !webhookToken) {
+      console.error("Invalid webhook ID or token.");
+      throw new Error("Invalid webhook ID or token.");
+    }
+
+    let jsonResponse = null;
+
+    try {
+      const apiUrl = `https://waddle-waddle.vercel.app/api/v1/discord-server-members/${webhookId}/${webhookToken}`;
+      const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
+        apiUrl
+      )}`;
+      const response = await fetch(corsProxyUrl);
+      if (!response.ok) {
+        console.error(response);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      jsonResponse = await response.json();
+    } catch (error) {
+      console.error("Error fetching Discord members:", error);
+      throw error;
+    }
+
+    return {
+      ...jsonResponse,
+    };
+  }
 }
 
 window.importProfile = async () => {
