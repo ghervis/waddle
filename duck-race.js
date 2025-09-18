@@ -3620,14 +3620,7 @@ class DuckRaceGame {
       const standingsText = standings
         .slice(0, 15) // Show up to 15 racers
         .map((duck, index) => {
-          const medal =
-            index === 0
-              ? "🥇"
-              : index === 1
-              ? "🥈"
-              : index === 2
-              ? "🥉"
-              : `${index + 1}.`;
+          const medal = `${index + 1}.`;
           return `${medal} **${duck.name}** - \`${(
             duck.finishTime / 1000
           ).toFixed(2)}s\``;
@@ -3636,11 +3629,19 @@ class DuckRaceGame {
 
       // Create embeds for the race results
       const embed = {
-        title: `🦆 ${raceTitle} 🏁`,
+        title: `${raceTitle}`,
+        url: "https://ghervis.github.io/waddle",
         description: `**🏆 Winner: ${winner.name}** - \`${(
           winner.finishTime / 1000
         ).toFixed(2)}s\`\n\n**📊 Final Standings:**\n${standingsText}`,
         color: 0xffd700, // Gold color
+        author: {
+          icon_url:
+            "https://raw.githubusercontent.com/ghervis/waddle/main/waddle.png",
+        },
+        thumbnail: {
+          url: "https://raw.githubusercontent.com/ghervis/waddle/main/waddle.png",
+        },
         footer: {
           text: `Race completed at ${raceTime}`,
           icon_url:
@@ -3650,7 +3651,11 @@ class DuckRaceGame {
       };
 
       const payload = {
+        content: null,
         embeds: [embed],
+        avatar_url:
+          "https://raw.githubusercontent.com/ghervis/waddle/main/waddle.png",
+        username: "Waddle",
       };
 
       // Use promise-based fetch instead of await
