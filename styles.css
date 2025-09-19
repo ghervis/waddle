@@ -82,7 +82,7 @@ body:before {
   border: 2px solid;
   border-radius: 5px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   display: flex;
   align-items: center;
@@ -110,13 +110,12 @@ body:before {
 }
 
 .manage-btn {
-  margin-right: 10px;
   color: #ffffff;
+  min-width: 88px;
 }
 
 /* Race Mode Toggle Slider */
 .race-mode-toggle {
-  margin-right: 10px;
   user-select: none;
 }
 
@@ -1366,7 +1365,7 @@ input[type="color"].color-picker {
   }
 
   .sidebar-bottom-content {
-    padding: 15px 0;
+    padding: 15px 0 30px;
     display: flex;
   }
 
@@ -1542,11 +1541,6 @@ input[type="color"].color-picker {
     right: 15%;
     top: 18%;
     pointer-events: none;
-  }
-
-  /* Mobile race mode toggle */
-  .race-mode-toggle {
-    margin-right: 8px;
   }
 
   .toggle-label {
