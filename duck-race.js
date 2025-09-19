@@ -2107,6 +2107,33 @@ class DuckRaceGame {
     }
   }
 
+  async copyInviteLink() {
+    const inviteUrl =
+      "https://discord.com/oauth2/authorize?client_id=1413746602979495936&scope=bot+applications.commands";
+
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      const statusElement = document.getElementById("inviteCopyStatus");
+      if (statusElement) {
+        statusElement.textContent = "✅ Invite link copied to clipboard!";
+        statusElement.style.color = "#4CAF50";
+        setTimeout(() => {
+          statusElement.textContent = "";
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Failed to copy invite link:", error);
+      const statusElement = document.getElementById("inviteCopyStatus");
+      if (statusElement) {
+        statusElement.textContent = "❌ Failed to copy invite link";
+        statusElement.style.color = "#e74c3c";
+        setTimeout(() => {
+          statusElement.textContent = "";
+        }, 3000);
+      }
+    }
+  }
+
   startResetHold(event) {
     // Prevent default behavior for touch events to avoid conflicts
     if (event && event.type.startsWith("touch")) {

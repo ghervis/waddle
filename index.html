@@ -198,6 +198,30 @@
             />
           </div>
 
+          <div class="settings-section invite">
+            <h4>📨 Invite Waddle Bot</h4>
+            <p>Invite Waddle Bot to your server</p>
+            <button
+              id="copyInviteBtn"
+              class="invite-copy-btn"
+              onclick="window.game && window.game.copyInviteLink()"
+              title="https://discord.com/oauth2/authorize?client_id=1413746602979495936&scope=bot+applications.commands"
+            >
+              <img
+                src="waddle.png"
+                alt="Waddle"
+                style="
+                  width: 20px;
+                  height: 20px;
+                  margin-right: 5px;
+                  vertical-align: middle;
+                "
+              />
+              Copy Bot Invite Link
+            </button>
+            <div id="inviteCopyStatus" class="copy-status"></div>
+          </div>
+
           <div class="settings-section music">
             <h4>🎵 Audio</h4>
             <label

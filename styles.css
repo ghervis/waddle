@@ -870,6 +870,22 @@ canvas {
   width: 100%;
 }
 
+.invite-copy-btn {
+  background: #5865f2;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+.invite-copy-btn:hover {
+  background: #4752c4;
+}
+
 .skill-list summary {
   cursor: pointer;
   user-select: none;
@@ -1628,6 +1644,15 @@ input[type="color"].color-picker {
 
 .settings-section.music h4 {
   color: #ffd700;
+}
+
+.settings-section.invite {
+  border-color: #5865f2;
+  background: rgba(88, 101, 242, 0.1);
+}
+
+.settings-section.invite h4 {
+  color: #5865f2;
 }
 
 .mute-btn {
