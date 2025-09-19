@@ -425,7 +425,6 @@ body:before {
   align-items: center;
   padding: 20px;
   position: relative;
-  min-height: min-content;
 }
 
 /* Ranked Profile Button Styles */
@@ -1275,7 +1274,7 @@ input[type="color"].color-picker {
 /* Mobile Responsive Styles */
 @media (max-width: 1280px) {
   body {
-    flex-direction: column;
+    flex-direction: column-reverse;
     height: 100vh; /* Fixed height */
     min-height: 100vh;
     overflow: hidden; /* Disable body scroll */
@@ -1295,8 +1294,7 @@ input[type="color"].color-picker {
     flex-direction: column;
     justify-content: flex-start; /* Start content from top */
     top: 2%;
-    height: 100%;
-    order: 2;
+    flex: 1;
   }
 
   .sidebar-header {
@@ -1330,11 +1328,8 @@ input[type="color"].color-picker {
 
   .main-content {
     padding: 10px;
-    flex: 1;
-    /* min-height: 55vh; */
-    /* max-height: 55vh; */
+    flex: 0 0 auto;
     overflow: hidden;
-    order: 1;
   }
 
   canvas {
@@ -1398,6 +1393,10 @@ input[type="color"].color-picker {
     left: -100%;
     background-size: 180px 180px;
   }
+
+  .sidebar-header h2 {
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1415,6 +1414,7 @@ input[type="color"].color-picker {
     /* Position sidebar to start from middle of available space */
     box-sizing: border-box;
     top: 1%;
+    flex: 1;
   }
 
   .sidebar-content {
@@ -1433,6 +1433,7 @@ input[type="color"].color-picker {
   .main-content {
     padding: 5px;
     overflow: hidden;
+    flex: 0 0 auto;
   }
 
   canvas {
