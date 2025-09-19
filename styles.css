@@ -769,7 +769,7 @@ canvas {
   color: white;
 }
 
-.dialog-buttons button:last-child {
+.dialog-buttons button:not([disabled]):last-child {
   background: #4ecdc4;
   color: white;
 }
@@ -789,10 +789,17 @@ canvas {
   transition: all 0.3s ease;
 }
 
-.giant-update-btn:hover {
+.giant-update-btn:not([disabled]):hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   background: linear-gradient(45deg, #44a08d, #4ecdc4);
+}
+
+.giant-update-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Settings dialog extracted inline styles */

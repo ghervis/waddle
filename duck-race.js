@@ -97,6 +97,9 @@ class DuckRaceGame {
       JSON.parse(localStorage.getItem("hiddenDiscordRacers") || "[]")
     );
 
+    // Initially disable start button until racers are populated
+    this.toggleStartBtn(false);
+
     this.initializeAsync();
     this.initializeRankedProfileButton();
     this.draw();
@@ -107,6 +110,28 @@ class DuckRaceGame {
   async initializeAsync() {
     await this.updateRacersList();
     await this.updateManageButtonImage();
+
+    // Enable start button after initialization if we have racers
+    // This ensures the button is enabled regardless of the initial state
+    if (this.ducks && this.ducks.length > 0) {
+      this.toggleStartBtn(true);
+    } else {
+      // Fallback: enable for casual mode even if no ducks (shouldn't happen)
+      if (!this.isRankedMode()) {
+        this.toggleStartBtn(true);
+      }
+    }
+
+    // Final fallback: ensure start button is enabled after a short delay
+    // This handles any edge cases where the button might remain disabled
+    setTimeout(() => {
+      const startBtn = document.getElementById("startBtn");
+      if (startBtn && startBtn.disabled) {
+        if (!this.isRankedMode() || window.rankedRacerId) {
+          this.toggleStartBtn(true);
+        }
+      }
+    }, 1000);
   }
 
   initializeRankedProfileButton() {
@@ -1413,6 +1438,13 @@ class DuckRaceGame {
       this.initializeDucks(racerConfigs);
       this.updateLeaderboard();
       this.draw();
+
+      // Enable start button if racers are populated
+      if (this.ducks.length > 0) {
+        this.toggleStartBtn(true);
+      } else {
+        this.toggleStartBtn(false);
+      }
       return;
     }
 
@@ -1474,6 +1506,23 @@ class DuckRaceGame {
         this.initializeDucks(racerConfigs);
         this.updateLeaderboard();
         this.draw();
+
+        // Enable start button if racers are populated
+        if (this.ducks.length > 0) {
+          this.toggleStartBtn(true);
+        } else {
+          this.toggleStartBtn(false);
+        }
+
+        // For ranked mode, ensure start button is enabled if we have a racer
+        if (this.isRankedMode() && window.rankedRacerId) {
+          this.toggleStartBtn(true);
+        }
+
+        // For Discord mode, ensure start button is enabled if we have racers
+        if (this.manageMode === "discord" && this.ducks.length > 0) {
+          this.toggleStartBtn(true);
+        }
         return;
       }
     }
@@ -1490,14 +1539,20 @@ class DuckRaceGame {
       "#DA70D6",
     ];
     for (let i = 0; i < 5; i++) {
-      const name = this.customRacerNames[i];
-      if (name && name.trim() !== "") {
-        racerConfigs.push({
-          id: i,
-          name: name,
-          color: this.customRacerColors[i] || defaultPalette[i],
-          profilePicture: this.customRacerProfilePictures[i] || null,
-        });
+      const name = this.customRacerNames[i] || this.getRandomDuckName();
+      racerConfigs.push({
+        id: i,
+        name: name,
+        color: this.customRacerColors[i] || defaultPalette[i],
+        profilePicture: this.customRacerProfilePictures[i] || null,
+      });
+      // Update the customRacerNames if it was empty
+      if (!this.customRacerNames[i]) {
+        this.customRacerNames[i] = name;
+        localStorage.setItem(
+          "customRacerNames",
+          JSON.stringify(this.customRacerNames)
+        );
       }
     }
 
@@ -1519,6 +1574,18 @@ class DuckRaceGame {
     this.updateLeaderboard();
 
     this.draw();
+
+    // Enable start button if racers are populated
+    if (this.ducks.length > 0) {
+      this.toggleStartBtn(true);
+    } else {
+      this.toggleStartBtn(false);
+    }
+
+    // For casual mode, ensure start button is enabled since we always have default racers
+    if (!this.isRankedMode()) {
+      this.toggleStartBtn(true);
+    }
   }
 
   rgbToHex(r, g, b) {
@@ -1983,6 +2050,23 @@ class DuckRaceGame {
 
     this.settings.discordWebhookUrl = discordWebhookUrl;
     this.saveSettings();
+
+    // Update tooltip for manage mode toggle if manage dialog is open
+    if (
+      document.getElementById("manageDialog") &&
+      !document.getElementById("manageDialog").hidden
+    ) {
+      const label = document.querySelector('label[for="manageModeToggle"]');
+      if (label) {
+        const hasWebhook = discordWebhookUrl && discordWebhookUrl.trim() !== "";
+        if (!hasWebhook) {
+          label.title =
+            "Discord webhook URL is not set. Please configure it in Settings.";
+        } else {
+          label.title = ""; // Clear title if webhook is set
+        }
+      }
+    }
   }
 
   async copyProfileLink() {
@@ -3520,6 +3604,9 @@ class DuckRaceGame {
     // Clear log
     this.clearLog();
     this.log("🛑 Race stopped and reset!");
+
+    // Ensure start button is enabled after stopping race
+    this.toggleStartBtn(true);
   }
 
   endRace() {
@@ -3550,6 +3637,9 @@ class DuckRaceGame {
 
     // Update UI to show add button again
     this.updateLeaderboard();
+
+    // Ensure start button is enabled after race ends
+    this.toggleStartBtn(true);
 
     // Announce winner
     if (this.ducks && this.ducks.length > 0) {
@@ -3958,12 +4048,19 @@ class DuckRaceGame {
   }
 
   async generateRankedRacerId() {
-    // Disable start button while generating ranked racer ID
-    this.toggleStartBtn(false);
+    // Only disable start button if we're in ranked mode and don't have a racer yet
+    const wasDisabled =
+      this.isRankedMode() && !window.localStorage.getItem("rankedRacerId");
+    if (wasDisabled) {
+      this.toggleStartBtn(false);
+    }
 
     if (null !== window.localStorage.getItem("rankedRacerId")) {
       this.setWindowRacerData();
-      this.toggleStartBtn(true);
+      // Only re-enable if we disabled it
+      if (wasDisabled) {
+        this.toggleStartBtn(true);
+      }
       return;
     }
 
@@ -3994,7 +4091,10 @@ class DuckRaceGame {
     } catch (error) {
       console.error("Error generating racer ID:", error);
     } finally {
-      this.toggleStartBtn(true);
+      // Only re-enable if we disabled it at the start
+      if (wasDisabled) {
+        this.toggleStartBtn(true);
+      }
     }
   }
 
@@ -4396,6 +4496,17 @@ class DuckRaceGame {
     // Update Manage button color initially
     this.updateManageButtonColor();
 
+    // Add tooltip/title to the slider when webhook is not set
+    const label = document.querySelector('label[for="manageModeToggle"]');
+    if (label) {
+      if (!hasWebhook) {
+        label.title =
+          "Discord webhook URL is not set. Please configure it in Settings.";
+      } else {
+        label.title = ""; // Clear title if webhook is set
+      }
+    }
+
     // Add event listener
     toggle.addEventListener("change", async () => {
       this.manageMode = toggle.checked ? "discord" : "casual";
@@ -4411,9 +4522,17 @@ class DuckRaceGame {
 
     if (this.manageMode === "discord") {
       // Discord mode: fetch members and create models
+      const updateBtn = document.querySelector(
+        'button[onclick*="applyManageUpdate"]'
+      );
+      if (updateBtn) {
+        updateBtn.disabled = true;
+      }
+
       let discordMembers = null;
       try {
-        discordMembers = await this.fetchDiscordMembers();
+        // Force fresh fetch when opening manage dialog to ensure up-to-date data
+        discordMembers = await this.fetchDiscordMembers(true);
 
         if (discordMembers && discordMembers.members) {
           models = [];
@@ -4454,6 +4573,11 @@ class DuckRaceGame {
               profilePicture: member.avatarUrl || null,
             });
           }
+
+          // Enable the Update button after successful Discord fetch
+          if (updateBtn) {
+            updateBtn.disabled = false;
+          }
         } else {
           // Fallback to empty list if no members
           models = [];
@@ -4462,8 +4586,23 @@ class DuckRaceGame {
         console.error("Failed to fetch Discord members:", error);
         this.log("❌ Failed to fetch Discord members", "skill");
         models = [];
+
+        // Disable the Update button when Discord fetch fails
+        const updateBtn = document.querySelector(
+          'button[onclick*="applyManageUpdate"]'
+        );
+        if (updateBtn) {
+          updateBtn.disabled = true;
+        }
       }
     } else {
+      // Casual mode: enable the Update button
+      const updateBtn = document.querySelector(
+        'button[onclick*="applyManageUpdate"]'
+      );
+      if (updateBtn) {
+        updateBtn.disabled = false;
+      }
       // Casual mode: use existing models
       models = this.getManageModels();
     }
@@ -5550,12 +5689,39 @@ class DuckRaceGame {
       const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
         apiUrl
       )}`;
-      jsonResponse = await this.cachedFetch(
-        corsProxyUrl,
-        {},
-        `discord_members_${webhookId}`,
-        noCache ? 0 : 30000
-      );
+
+      // Custom fetch with error handling for inviteUrl
+      const response = await fetch(corsProxyUrl);
+      if (!response.ok) {
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch (e) {}
+        if (errorData && errorData.inviteUrl) {
+          window.alert(
+            `Bot may not be invited to that server. Invite URL: ${errorData.inviteUrl}`
+          );
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      jsonResponse = await response.json();
+
+      // Cache manually if not noCache
+      if (!noCache) {
+        const cacheKey = `discord_members_${webhookId}`;
+        const now = Date.now();
+        try {
+          localStorage.setItem(
+            cacheKey,
+            JSON.stringify({
+              data: jsonResponse,
+              timestamp: now,
+            })
+          );
+        } catch (e) {
+          console.warn("Failed to cache Discord members data:", e);
+        }
+      }
     } catch (error) {
       console.error("Error fetching Discord members:", error);
       throw error;

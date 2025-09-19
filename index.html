@@ -564,6 +564,10 @@
         // Update the racers display immediately when mode changes
         if (window.game) {
           window.game.stopRace();
+          // Enable start button after mode change if we have racers
+          if (window.game.ducks && window.game.ducks.length > 0) {
+            window.game.toggleStartBtn(true);
+          }
         }
       });
 
