@@ -3726,6 +3726,10 @@ class DuckRaceGame {
       return; // No webhook configured
     }
 
+    if (this.isRankedMode()) {
+      return; // Do not publish ranked
+    }
+
     try {
       const winner = standings[0];
       const raceTime = new Date().toLocaleString();
