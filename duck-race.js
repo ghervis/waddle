@@ -86,9 +86,6 @@ class DuckRaceGame {
       },
     };
 
-    // Track racers marked for deletion
-    this.racersMarkedForDeletion = new Set();
-
     // Track pending additions in manage dialog
     this.pendingManageAdditions = [];
 
@@ -1315,108 +1312,6 @@ class DuckRaceGame {
           this.leaderboardElement.scrollHeight;
       }
     }, 100); // Small delay to ensure DOM is updated
-  }
-
-  removeRacer(id) {
-    const racerIdStr = String(id);
-
-    // Check if racer is already marked for deletion
-    if (this.racersMarkedForDeletion.has(racerIdStr)) {
-      // Confirm removal
-      const defaultIndex = parseInt(racerIdStr);
-      let racerName;
-      let isDefault = false;
-      if (
-        !isNaN(defaultIndex) &&
-        defaultIndex >= 0 &&
-        defaultIndex < 5 &&
-        !this.isRankedMode()
-      ) {
-        racerName = this.duckNames[defaultIndex] || `Duck ${defaultIndex + 1}`;
-        isDefault = true;
-      } else {
-        const racer = this.customRacers.find(
-          (r) => String(r.id) === racerIdStr
-        );
-        if (racer) {
-          racerName = racer.name;
-          isDefault = false;
-        } else {
-          console.warn("Racer not found:", racerIdStr);
-          return;
-        }
-      }
-
-      // Actually remove the racer
-      const dialog = {
-        racerId: id,
-        isDefaultRacer: isDefault,
-      };
-      this.removeRacerConfirmed(dialog);
-      this.racersMarkedForDeletion.delete(racerIdStr);
-      this.log(`Removed racer "${racerName}"`, "skill");
-    } else {
-      // Mark racer for deletion with strikethrough
-      this.markRacerForDeletion(id);
-    }
-  }
-
-  markRacerForDeletion(id, isDefault) {
-    const racerIdStr = String(id);
-
-    // Add to marked for deletion set
-    this.racersMarkedForDeletion.add(racerIdStr);
-
-    // Update leaderboard to show strikethrough effect
-    this.updateLeaderboard();
-
-    // Log the action
-    this.log(
-      `Marked racer for deletion. Click again to confirm removal.`,
-      "skill"
-    );
-  }
-
-  removeRacerConfirmed(dialog) {
-    // If no dialog provided, fall back to DOM (for backward compatibility)
-    if (!dialog) {
-      dialog = document.getElementById("removeRacerDialog");
-    }
-    if (!dialog || !dialog.racerId) return;
-    const id = dialog.racerId;
-    const isDefault = dialog.isDefaultRacer;
-    const racerIdStr = String(id);
-    if (isDefault) {
-      const defaultIndex = parseInt(racerIdStr);
-      // Reset default racer slot
-      this.customRacerNames[defaultIndex] = this.getRandomDuckName();
-      this.customRacerColors[defaultIndex] = [
-        "#FFD700",
-        "#FF6347",
-        "#32CD32",
-        "#1E90FF",
-        "#DA70D6",
-      ][defaultIndex];
-      this.customRacerProfilePictures[defaultIndex] = null;
-
-      // Save to localStorage
-      localStorage.setItem(
-        "customRacerNames",
-        JSON.stringify(this.customRacerNames)
-      );
-      this.saveDefaultRacerColors();
-      this.saveDefaultRacerProfilePictures();
-
-      this.updateRacersList();
-    } else {
-      // Custom racer
-      this.customRacers = this.customRacers.filter(
-        (racer) => String(racer.id) !== racerIdStr
-      );
-      this.saveCustomRacers();
-      this.updateRacersList();
-    }
-    dialog.close();
   }
 
   async updateRacersList(noCache = false) {
@@ -3866,20 +3761,12 @@ class DuckRaceGame {
         racerCircleContent = `<div class="racer-circle" style="background-color: ${racerColor}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px;">${initial}</div>`;
       }
 
-      // Check if racer is marked for deletion
-      const isMarkedForDeletion = this.racersMarkedForDeletion.has(racerId);
-
       entry.innerHTML = `
           <div class="duck-info">
             ${racerCircleContent}
             <div class="duck-name">${name}</div>
           </div>
         `;
-
-      // Apply strikethrough styling if marked for deletion
-      if (isMarkedForDeletion) {
-        entry.classList.add("pending-delete");
-      }
 
       this.leaderboardElement.appendChild(entry);
     });
