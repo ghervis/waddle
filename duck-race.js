@@ -45,8 +45,9 @@ class DuckRaceGame {
     // Load custom racers from localStorage
     this.loadCustomRacers();
 
-    // Load settings from localStorage
-    this.loadSettings();
+    // Initialize settings dialog
+    this.settingsDialog = new SettingsDialog(this);
+    this.settingsDialog.loadSettings();
 
     // Load manage mode from localStorage
     this.manageMode = localStorage.getItem("manageMode") || "casual";
@@ -1042,26 +1043,6 @@ class DuckRaceGame {
     this.cleanupDuplicateNames();
   }
 
-  loadSettings() {
-    const saved = localStorage.getItem("duckRaceSettings");
-    this.settings = saved
-      ? JSON.parse(saved)
-      : {
-          discordWebhookUrl: "",
-          speechMuted: false,
-          voiceIndex: 0,
-          speechVolume: 0.5,
-        };
-
-    // Load master volume settings
-    this.masterMuted = localStorage.getItem("volumeMuted") === "true";
-    this.musicVolume = parseFloat(localStorage.getItem("musicVolume")) || 0.3;
-  }
-
-  saveSettings() {
-    localStorage.setItem("duckRaceSettings", JSON.stringify(this.settings));
-  }
-
   saveHiddenDiscordRacers() {
     localStorage.setItem(
       "hiddenDiscordRacers",
@@ -1132,7 +1113,7 @@ class DuckRaceGame {
     }
 
     // Update speech settings to match master mute
-    this.settings.speechMuted = this.masterMuted;
+    this.settingsDialog.settings.speechMuted = this.masterMuted;
 
     // Update UI elements
     const volumeBtn = document.getElementById("volumeBtn");
@@ -1828,7 +1809,7 @@ class DuckRaceGame {
     });
 
     if (voices.length > 0) {
-      select.value = this.settings.voiceIndex || 0;
+      select.value = this.settingsDialog.settings.voiceIndex || 0;
     }
   }
 
@@ -1852,7 +1833,7 @@ class DuckRaceGame {
 
     const input = document.getElementById("discordWebhookUrl");
     if (input) {
-      input.value = this.settings.discordWebhookUrl || "";
+      input.value = this.settingsDialog.settings.discordWebhookUrl || "";
       input.focus();
     }
 
@@ -1873,8 +1854,8 @@ class DuckRaceGame {
     const voiceSelect = document.getElementById("voiceSelect");
     if (voiceSelect) {
       voiceSelect.onchange = () => {
-        this.settings.voiceIndex = parseInt(voiceSelect.value);
-        this.saveSettings();
+        this.settingsDialog.settings.voiceIndex = parseInt(voiceSelect.value);
+        this.settingsDialog.saveSettings();
       };
     }
 
@@ -1882,18 +1863,19 @@ class DuckRaceGame {
     const speechVolumeSlider = document.getElementById("speechVolumeSlider");
     if (speechVolumeSlider) {
       speechVolumeSlider.value = Math.round(
-        (this.settings.speechVolume || 0.5) * 100
+        (this.settingsDialog.settings.speechVolume || 0.5) * 100
       );
       const speechVolumeValue = document.getElementById("speechVolumeValue");
       if (speechVolumeValue) {
         speechVolumeValue.textContent = speechVolumeSlider.value + "%";
       }
       speechVolumeSlider.oninput = () => {
-        this.settings.speechVolume = parseFloat(speechVolumeSlider.value) / 100;
+        this.settingsDialog.settings.speechVolume =
+          parseFloat(speechVolumeSlider.value) / 100;
         if (speechVolumeValue) {
           speechVolumeValue.textContent = speechVolumeSlider.value + "%";
         }
-        this.saveSettings();
+        this.settingsDialog.saveSettings();
       };
     }
 
@@ -1925,8 +1907,8 @@ class DuckRaceGame {
     const discordWebhookUrl =
       document.getElementById("discordWebhookUrl").value;
 
-    this.settings.discordWebhookUrl = discordWebhookUrl;
-    this.saveSettings();
+    this.settingsDialog.settings.discordWebhookUrl = discordWebhookUrl;
+    this.settingsDialog.saveSettings();
 
     const dialog = document.getElementById("settingsDialog");
     if (dialog && typeof dialog.close === "function") {
@@ -1943,8 +1925,8 @@ class DuckRaceGame {
     const discordWebhookUrl =
       document.getElementById("discordWebhookUrl").value;
 
-    this.settings.discordWebhookUrl = discordWebhookUrl;
-    this.saveSettings();
+    this.settingsDialog.settings.discordWebhookUrl = discordWebhookUrl;
+    this.settingsDialog.saveSettings();
 
     // Update tooltip for manage mode toggle if manage dialog is open
     if (
@@ -2094,7 +2076,7 @@ class DuckRaceGame {
     this.duckNames = [];
     this.duckColors = [];
     this.duckProfilePictures = [];
-    this.settings = {};
+    this.settingsDialog.settings = {};
     this.customRacerNames = this.loadCustomRacerNames();
     this.customRacerProfilePictures = this.loadCustomRacerProfilePictures();
     this.customRacerColors = this.loadCustomRacerColors();
@@ -3452,8 +3434,8 @@ class DuckRaceGame {
 
   publishToDiscord(standings) {
     if (
-      !this.settings.discordWebhookUrl ||
-      this.settings.discordWebhookUrl.trim() === ""
+      !this.settingsDialog.settings.discordWebhookUrl ||
+      this.settingsDialog.settings.discordWebhookUrl.trim() === ""
     ) {
       return; // No webhook configured
     }
@@ -3512,7 +3494,7 @@ class DuckRaceGame {
       };
 
       // Use promise-based fetch instead of await
-      fetch(this.settings.discordWebhookUrl, {
+      fetch(this.settingsDialog.settings.discordWebhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -4016,12 +3998,12 @@ class DuckRaceGame {
       .getVoices()
       .filter((voice) => voice.lang.startsWith("en-US"));
     speechSynthesisUtterance.voice =
-      voices[this.settings.voiceIndex || 0] || voices[0];
+      voices[this.settingsDialog.settings.voiceIndex || 0] || voices[0];
 
     // Use master volume settings for speech
     const effectiveVolume = this.masterMuted
       ? 0
-      : this.settings.speechVolume || 0.5;
+      : this.settingsDialog.settings.speechVolume || 0.5;
     speechSynthesisUtterance.volume = effectiveVolume;
 
     return speechSynthesisUtterance;
@@ -4239,8 +4221,8 @@ class DuckRaceGame {
 
     // Check if Discord webhook is configured
     const hasWebhook =
-      this.settings.discordWebhookUrl &&
-      this.settings.discordWebhookUrl.trim() !== "";
+      this.settingsDialog.settings.discordWebhookUrl &&
+      this.settingsDialog.settings.discordWebhookUrl.trim() !== "";
 
     // Disable toggle if no webhook
     toggle.disabled = !hasWebhook;
@@ -5409,7 +5391,7 @@ class DuckRaceGame {
   }
 
   async fetchDiscordMembers(noCache = false) {
-    const discordWebhookUrl = this.settings.discordWebhookUrl;
+    const discordWebhookUrl = this.settingsDialog.settings.discordWebhookUrl;
     if (!discordWebhookUrl || discordWebhookUrl.trim() === "") {
       return;
     }
