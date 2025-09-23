@@ -305,6 +305,35 @@ class DuckRaceGame {
           : "";
     }
 
+    // Populate inventory display if in ranked mode
+    if (isRankedModeRacer && window.rankedRacerInventory) {
+      const inventory = window.rankedRacerInventory;
+      const skills = [
+        "boost",
+        "bomb",
+        "splash",
+        "immune",
+        "lightning",
+        "magnet",
+      ];
+      const skillEmojis = ["⏩", "💣", "🌊", "🛡️", "⚡", "🧲"];
+
+      skills.forEach((skill) => {
+        const count = inventory[skill] || 0;
+        const countEl = document.getElementById(`inventory-${skill}`);
+        if (countEl) {
+          countEl.textContent = count;
+        }
+      });
+
+      // Handle box inventory
+      const boxCount = inventory.box || 0;
+      const boxCountEl = document.getElementById("inventory-box");
+      if (boxCountEl) {
+        boxCountEl.textContent = boxCount;
+      }
+    }
+
     // Real-time validation (overwrite previous handlers to avoid duplicates)
     if (nameInput) {
       nameInput.oninput = () => {
@@ -1675,6 +1704,9 @@ class DuckRaceGame {
     // Listen for race mode changes to update profile button
     const raceModeToggle = document.getElementById("raceModeToggle");
     if (raceModeToggle) {
+      const savedMode = localStorage.getItem("raceMode") || "casual";
+      raceModeToggle.checked = savedMode === "ranked";
+
       raceModeToggle.addEventListener("change", () => {
         // Small delay to ensure game object is ready
         setTimeout(() => {
@@ -1682,40 +1714,15 @@ class DuckRaceGame {
             window.game.updateRankedProfileButton();
             // If switching to ranked mode, fetch profile data
             if (raceModeToggle.checked && window.okey) {
-              const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}`;
-              const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
-                fetchProfileUrl
-              )}`;
-              window.game
-                .cachedFetch(
-                  corsProxyUrl,
-                  {},
-                  `fetch_profile_${window.okey}`,
-                  30000
-                )
-                .then((data) => {
-                  window.localStorage.setItem("rankedRacerId", data.id);
-                  window.localStorage.setItem("rankedRacerName", data.name);
-                  window.localStorage.setItem(
-                    "rankedRacerProfilePicture",
-                    data.profilePicture || ""
-                  );
-                  window.localStorage.setItem(
-                    "rankedRacerColor",
-                    data.color || ""
-                  );
-                  window.localStorage.setItem("rankedRacerMmr", data.mmr || 0);
-                  window.game.setWindowRacerData();
-                  window.game.updateRankedProfileButton();
-                  // Also fetch leaderboard if in ranked mode
-                  if (window.game.isRankedMode()) {
-                    window.game.fetchOnlineLeaderboard();
-                  }
-                })
-                .catch((error) =>
-                  console.error("Error fetching profile:", error)
-                );
+              window.game.fetchRankedProfile();
+              if (window.game.isRankedMode()) {
+                window.game.fetchOnlineLeaderboard();
+              }
             }
+            localStorage.setItem(
+              "raceMode",
+              raceModeToggle.checked ? "ranked" : "casual"
+            );
           }
         }, 100);
       });
@@ -3891,6 +3898,40 @@ class DuckRaceGame {
     }
   }
 
+  fetchRankedProfile() {
+    if (!window.okey) return;
+
+    const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}`;
+    const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
+      fetchProfileUrl
+    )}`;
+
+    this.cachedFetch(corsProxyUrl, {}, `fetch_profile_${window.okey}`, 30000)
+      .then((data) => {
+        localStorage.setItem("rankedRacerId", data.id);
+        localStorage.setItem("rankedRacerName", data.name);
+        localStorage.setItem(
+          "rankedRacerProfilePicture",
+          data.profilePicture || ""
+        );
+        localStorage.setItem("rankedRacerColor", data.color || "");
+        localStorage.setItem("rankedRacerMmr", data.mmr || 0);
+        const inventory = {
+          boost: data.boost || 0,
+          bomb: data.bomb || 0,
+          splash: data.splash || 0,
+          immune: data.immune || 0,
+          lightning: data.lightning || 0,
+          magnet: data.magnet || 0,
+          box: data.box || 0,
+        };
+        localStorage.setItem("rankedRacerInventory", JSON.stringify(inventory));
+        this.setWindowRacerData();
+        this.updateRankedProfileButton();
+      })
+      .catch((error) => console.error("Error fetching profile:", error));
+  }
+
   updateOnlineLeaderboard() {
     const leaderboardSection = document.getElementById("leaderboardSection");
     const globalLeaderboard = document.getElementById("globalLeaderboard");
@@ -3963,6 +4004,9 @@ class DuckRaceGame {
     );
     window.rankedRacerColor = window.localStorage.getItem("rankedRacerColor");
     window.rankedRacerMmr = window.localStorage.getItem("rankedRacerMmr");
+    window.rankedRacerInventory = JSON.parse(
+      window.localStorage.getItem("rankedRacerInventory") || "{}"
+    );
     window.okey = window.localStorage.getItem("okey");
   }
 
@@ -5527,6 +5571,19 @@ window.importProfile = async () => {
     );
     window.localStorage.setItem("okey", okeyValue);
     window.localStorage.setItem("rankedRacerColor", jsonResponse.color || "");
+    const inventory = {
+      boost: jsonResponse.boost || 0,
+      bomb: jsonResponse.bomb || 0,
+      splash: jsonResponse.splash || 0,
+      immune: jsonResponse.immune || 0,
+      lightning: jsonResponse.lightning || 0,
+      magnet: jsonResponse.magnet || 0,
+      box: jsonResponse.box || 0,
+    };
+    window.localStorage.setItem(
+      "rankedRacerInventory",
+      JSON.stringify(inventory)
+    );
     window.location.hash = "";
   } catch (e) {
     console.error("Error fetching profile with OKEY from URL:", e);
@@ -5539,6 +5596,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   await window.importProfile();
 
   window.game = new DuckRaceGame();
+
+  // If in ranked mode and okey defined, fetch profile
+  if (window.game.isRankedMode() && window.okey) {
+    window.game.fetchRankedProfile();
+  }
 
   // If in ranked mode, fetch leaderboard data
   if (window.game.isRankedMode()) {
