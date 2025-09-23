@@ -1680,6 +1680,42 @@ class DuckRaceGame {
         setTimeout(() => {
           if (window.game) {
             window.game.updateRankedProfileButton();
+            // If switching to ranked mode, fetch profile data
+            if (raceModeToggle.checked && window.okey) {
+              const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}`;
+              const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
+                fetchProfileUrl
+              )}`;
+              window.game
+                .cachedFetch(
+                  corsProxyUrl,
+                  {},
+                  `fetch_profile_${window.okey}`,
+                  30000
+                )
+                .then((data) => {
+                  window.localStorage.setItem("rankedRacerId", data.id);
+                  window.localStorage.setItem("rankedRacerName", data.name);
+                  window.localStorage.setItem(
+                    "rankedRacerProfilePicture",
+                    data.profilePicture || ""
+                  );
+                  window.localStorage.setItem(
+                    "rankedRacerColor",
+                    data.color || ""
+                  );
+                  window.localStorage.setItem("rankedRacerMmr", data.mmr || 0);
+                  window.game.setWindowRacerData();
+                  window.game.updateRankedProfileButton();
+                  // Also fetch leaderboard if in ranked mode
+                  if (window.game.isRankedMode()) {
+                    window.game.fetchOnlineLeaderboard();
+                  }
+                })
+                .catch((error) =>
+                  console.error("Error fetching profile:", error)
+                );
+            }
           }
         }, 100);
       });
@@ -3955,13 +3991,6 @@ class DuckRaceGame {
   isRankedMode() {
     const raceModeToggle = document.getElementById("raceModeToggle");
     return raceModeToggle && raceModeToggle.checked;
-  }
-
-  // Update profile button when racer data changes (e.g., after editing)
-  onRacerDataUpdated() {
-    if (this.isRankedMode()) {
-      this.updateRankedProfileButton();
-    }
   }
 
   // Update Manage button color based on manage mode
