@@ -187,6 +187,136 @@ class DuckRaceGame {
     }
   }
 
+  // Handle skill equipment in edit profile dialog
+  handleSkillEquip(dialog, skill, skillIndex) {
+    // Check if skill has inventory count > 0
+    const inventory = window.rankedRacerInventory || {};
+    if (!inventory[skill] || inventory[skill] <= 0) {
+      return; // Cannot equip skill with no inventory
+    }
+
+    // Initialize most recently changed slot if not exists
+    if (!dialog.lastChangedSlot) {
+      dialog.lastChangedSlot = null;
+    }
+
+    // Determine target slot based on current equipment state
+    let targetSlot = null;
+
+    // Check if both slots are filled (not null and not -1)
+    const bothSlotsFilled =
+      dialog.equip1 !== null &&
+      dialog.equip1 !== -1 &&
+      dialog.equip2 !== null &&
+      dialog.equip2 !== -1;
+
+    if (bothSlotsFilled) {
+      // When both slots are filled, replace the opposite of the most recently changed slot
+      if (dialog.lastChangedSlot === "equip1") {
+        targetSlot = "equip2";
+      } else if (dialog.lastChangedSlot === "equip2") {
+        targetSlot = "equip1";
+      } else {
+        // Fallback: if no last changed slot, replace equip1
+        targetSlot = "equip1";
+      }
+    } else {
+      console.log("dialog.equip1:", dialog.equip1, dialog.equip2);
+      if ((dialog.equip1 ?? -1) === -1) {
+        targetSlot = "equip1";
+      } else {
+        targetSlot = "equip2";
+      }
+    }
+
+    // If skill is already equipped, unequip it
+    if (dialog.equippedSkills.has(skill)) {
+      dialog.equippedSkills.delete(skill);
+      if (dialog.equip1 === skillIndex) {
+        dialog.equip1 = null;
+        dialog.lastChangedSlot = "equip1";
+      }
+      if (dialog.equip2 === skillIndex) {
+        dialog.equip2 = null;
+        dialog.lastChangedSlot = "equip2";
+      }
+    } else {
+      // Check if we already have 2 skills equipped and need to replace one
+      if (dialog.equippedSkills.size >= 2) {
+        // Remove the skill from the target slot
+        const oldSkillIndex =
+          targetSlot === "equip1" ? dialog.equip1 : dialog.equip2;
+        if (oldSkillIndex !== null) {
+          const oldSkillName = [
+            "boost",
+            "bomb",
+            "splash",
+            "immune",
+            "lightning",
+            "magnet",
+          ][oldSkillIndex];
+          dialog.equippedSkills.delete(oldSkillName);
+        }
+      }
+
+      // Equip the new skill
+      dialog.equippedSkills.add(skill);
+      if (targetSlot === "equip1") {
+        dialog.equip1 = skillIndex;
+      } else {
+        dialog.equip2 = skillIndex;
+      }
+
+      // Update last changed slot
+      dialog.lastChangedSlot = targetSlot;
+    }
+
+    // Update UI
+    this.updateEquipmentUI(dialog);
+  }
+
+  // Update equipment UI in edit profile dialog
+  updateEquipmentUI(dialog) {
+    const skills = ["boost", "bomb", "splash", "immune", "lightning", "magnet"];
+    const skillEmojis = ["⏩", "💣", "🌊", "🛡️", "⚡", "🧲"];
+
+    // Update inventory item styles
+    skills.forEach((skill) => {
+      const itemEl = document.getElementById(`inventory-item-${skill}`);
+      if (itemEl) {
+        if (dialog.equippedSkills.has(skill)) {
+          itemEl.classList.add("equipped");
+        } else {
+          itemEl.classList.remove("equipped");
+        }
+      }
+    });
+
+    // Update equipment squares
+    const equip1El = document.getElementById("equip1-square");
+    const equip2El = document.getElementById("equip2-square");
+
+    if (equip1El) {
+      if (dialog.equip1 !== null) {
+        equip1El.textContent = skillEmojis[dialog.equip1];
+        equip1El.style.border = "2px solid #4CAF50";
+      } else {
+        equip1El.textContent = "";
+        equip1El.style.border = "2px solid #ddd";
+      }
+    }
+
+    if (equip2El) {
+      if (dialog.equip2 !== null) {
+        equip2El.textContent = skillEmojis[dialog.equip2];
+        equip2El.style.border = "2px solid #4CAF50";
+      } else {
+        equip2El.textContent = "";
+        equip2El.style.border = "2px solid #ddd";
+      }
+    }
+  }
+
   // Override the existing editRacer method to handle giant button for ranked racer
   editRacer(id) {
     // Convert id to string for comparison
@@ -333,6 +463,70 @@ class DuckRaceGame {
       if (boxCountEl) {
         boxCountEl.textContent = boxCount;
       }
+
+      // Initialize equipment tracking
+      dialog.equippedSkills = new Set();
+      dialog.equip1 =
+        window.rankedRacerEquip1 !== null ? window.rankedRacerEquip1 : null;
+      dialog.equip2 =
+        window.rankedRacerEquip2 !== null ? window.rankedRacerEquip2 : null;
+      dialog.skillClickCounts = {}; // Track click counts per skill
+
+      // Initialize equipped skills set based on current equipment
+      if (dialog.equip1 !== null) {
+        const skillName1 = [
+          "boost",
+          "bomb",
+          "splash",
+          "immune",
+          "lightning",
+          "magnet",
+        ][dialog.equip1];
+        dialog.equippedSkills.add(skillName1);
+      }
+      if (dialog.equip2 !== null) {
+        const skillName2 = [
+          "boost",
+          "bomb",
+          "splash",
+          "immune",
+          "lightning",
+          "magnet",
+        ][dialog.equip2];
+        dialog.equippedSkills.add(skillName2);
+      }
+
+      // Add click handlers to inventory items
+      skills.forEach((skill, index) => {
+        const itemEl = document.getElementById(`inventory-item-${skill}`);
+        if (itemEl) {
+          itemEl.addEventListener("click", () => {
+            this.handleSkillEquip(dialog, skill, index);
+          });
+        }
+      });
+
+      // Add click handlers to equipment squares for unequipping
+      const equip1El = document.getElementById("equip1-square");
+      if (equip1El) {
+        equip1El.addEventListener("click", () => {
+          if (dialog.equip1 !== null) {
+            this.handleSkillEquip(dialog, skills[dialog.equip1], dialog.equip1);
+          }
+        });
+      }
+
+      const equip2El = document.getElementById("equip2-square");
+      if (equip2El) {
+        equip2El.addEventListener("click", () => {
+          if (dialog.equip2 !== null) {
+            this.handleSkillEquip(dialog, skills[dialog.equip2], dialog.equip2);
+          }
+        });
+      }
+
+      // Update UI to reflect current equipment state
+      this.updateEquipmentUI(dialog);
     }
 
     // Real-time validation (overwrite previous handlers to avoid duplicates)
@@ -2164,19 +2358,29 @@ class DuckRaceGame {
       )}`;
 
       try {
+        const payload = {
+          id: window.rankedRacerId,
+          name: name,
+          profilePicture: imageData,
+          okey: window.okey,
+          color: color,
+        };
+
+        // Add equipment data if available
+        const dialog = document.getElementById("editRacerDialog");
+        payload.equip1 = dialog.equip1 ?? -1;
+        payload.equip2 = dialog.equip2 ?? -1;
+
         await fetch(corsProxyUpdateRacerUrl, {
           method: "PUT", // Specify the HTTP method as POST
           headers: {
             "Content-Type": "application/json", // Inform the server about the data format
           },
-          body: JSON.stringify({
-            id: window.rankedRacerId,
-            name: name,
-            profilePicture: imageData,
-            okey: window.okey,
-            color: color,
-          }),
+          body: JSON.stringify(payload),
         });
+
+        // Clear fetch-profile cache to ensure updated data is fetched next time
+        localStorage.removeItem(`fetch_profile_${window.okey}`);
       } catch (reason) {
         console.error(reason);
         return;
@@ -2185,6 +2389,20 @@ class DuckRaceGame {
       window.localStorage.setItem("rankedRacerName", name);
       window.localStorage.setItem("rankedRacerProfilePicture", imageData);
       window.localStorage.setItem("rankedRacerColor", color);
+
+      // Save equipment data to localStorage
+      const dialog = document.getElementById("editRacerDialog");
+      if (dialog && dialog.equip1 !== null) {
+        window.localStorage.setItem("rankedRacerEquip1", dialog.equip1);
+      } else {
+        window.localStorage.removeItem("rankedRacerEquip1");
+      }
+      if (dialog && dialog.equip2 !== null) {
+        window.localStorage.setItem("rankedRacerEquip2", dialog.equip2);
+      } else {
+        window.localStorage.removeItem("rankedRacerEquip2");
+      }
+
       this.setWindowRacerData();
     }
 
@@ -3881,7 +4099,11 @@ class DuckRaceGame {
   fetchRankedProfile() {
     if (!window.okey) return;
 
-    const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}`;
+    const cacheBustFetchProfileWithEquip1AndEquip2 = `${
+      window.localStorage.getItem("rankedRacerEquip1") || ""
+    }${window.localStorage.getItem("rankedRacerEquip2") || ""}`;
+
+    const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}&_cb=${cacheBustFetchProfileWithEquip1AndEquip2}`;
     const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
       fetchProfileUrl
     )}`;
@@ -3906,6 +4128,15 @@ class DuckRaceGame {
           box: data.box || 0,
         };
         localStorage.setItem("rankedRacerInventory", JSON.stringify(inventory));
+
+        // Store equipment data if available
+        if (data.equip1 !== undefined) {
+          localStorage.setItem("rankedRacerEquip1", data.equip1);
+        }
+        if (data.equip2 !== undefined) {
+          localStorage.setItem("rankedRacerEquip2", data.equip2);
+        }
+
         this.setWindowRacerData();
         this.updateRankedProfileButton();
       })
@@ -3987,6 +4218,10 @@ class DuckRaceGame {
     window.rankedRacerInventory = JSON.parse(
       window.localStorage.getItem("rankedRacerInventory") || "{}"
     );
+    window.rankedRacerEquip1 =
+      parseInt(window.localStorage.getItem("rankedRacerEquip1")) || null;
+    window.rankedRacerEquip2 =
+      parseInt(window.localStorage.getItem("rankedRacerEquip2")) || null;
     window.okey = window.localStorage.getItem("okey");
   }
 

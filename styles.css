@@ -2072,6 +2072,13 @@ input[type="range"]:hover {
   border-radius: 6px;
   border: 1px solid #ddd;
   max-width: 60px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.inventory-item.equipped {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
 }
 
 .box-inventory-item {
@@ -2106,10 +2113,17 @@ input[type="range"]:hover {
   gap: 20px;
 }
 
-.equipment-div {
+.equipment-square {
   width: 120px;
   height: 120px;
   border: 2px solid #ddd;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+  color: #333;
+  transition: border-color 0.2s ease;
 }
