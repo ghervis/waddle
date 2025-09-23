@@ -2043,6 +2043,7 @@ input[type="range"]:hover {
 /* Inventory Section in Edit Profile Dialog */
 .inventory-section {
   margin: 20px 0;
+  overflow: hidden;
 }
 
 .inventory-section h4 {
@@ -2074,11 +2075,11 @@ input[type="range"]:hover {
 }
 
 .box-inventory-item {
-  margin-left: 13px;
+  margin-left: 16px;
 }
 
 .inventory-icon {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .inventory-count {

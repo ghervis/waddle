@@ -257,6 +257,7 @@ class DuckRaceGame {
     dialog.uploadedImage = racer.profilePicture; // Start with existing image
     dialog.isRankedModeRacer = isRankedModeRacer; // Store for later use
     dialog.isCustomRacer = isCustomRacer; // Store for later use
+    dialog.currentRacerId = racerId; // Store for button click handler
 
     // Update title with mode suffix
     const titleEl = document.getElementById("editRacerTitle");
@@ -350,37 +351,7 @@ class DuckRaceGame {
       };
     }
 
-    // Form submission handler (overwrite to avoid duplicate listeners)
-    if (form) {
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const name = nameInput ? nameInput.value.trim() : "";
-
-        if (!name) {
-          if (nameError) nameError.textContent = "Name is required";
-          if (nameError) nameError.style.display = "block";
-          if (nameInput) {
-            nameInput.style.borderColor = "#e74c3c";
-            nameInput.focus();
-          }
-          return;
-        }
-
-        if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
-          if (nameError)
-            nameError.textContent =
-              "Name must be 2-16 alphanumeric characters only";
-          if (nameError) nameError.style.display = "block";
-          if (nameInput) {
-            nameInput.style.borderColor = "#e74c3c";
-            nameInput.focus();
-          }
-          return;
-        }
-
-        this.updateRacerFromDialog(id);
-      };
-    }
+    // Form submission handler removed - using button onclick instead
 
     // Update submit button styling for ranked racer
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -2160,20 +2131,29 @@ class DuckRaceGame {
     if (!name) {
       const nameError = document.getElementById("nameError");
       const nameInput = document.getElementById("editDialogRacerName");
-      nameError.textContent = "Name is required";
-      nameError.style.display = "block";
-      nameInput.style.borderColor = "#e74c3c";
-      nameInput.focus();
+      if (nameError) {
+        nameError.textContent = "Name is required";
+        nameError.style.display = "block";
+      }
+      if (nameInput) {
+        nameInput.style.borderColor = "#e74c3c";
+        nameInput.focus();
+      }
       return;
     }
 
     if (!/^[A-Za-z0-9]{2,16}$/.test(name)) {
       const nameError = document.getElementById("nameError");
       const nameInput = document.getElementById("editDialogRacerName");
-      nameError.textContent = "Name must be 2-16 alphanumeric characters only";
-      nameError.style.display = "block";
-      nameInput.style.borderColor = "#e74c3c";
-      nameInput.focus();
+      if (nameError) {
+        nameError.textContent =
+          "Name must be 2-16 alphanumeric characters only";
+        nameError.style.display = "block";
+      }
+      if (nameInput) {
+        nameInput.style.borderColor = "#e74c3c";
+        nameInput.focus();
+      }
       return;
     }
 

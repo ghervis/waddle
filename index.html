@@ -366,104 +366,111 @@
           ×
         </button>
         <h3 id="editRacerTitle">Edit Racer</h3>
-        <form id="editRacerForm">
-          <label for="editDialogRacerName"
-            >Name (2-16 alphanumeric characters) *</label
-          >
-          <input
-            type="text"
-            id="editDialogRacerName"
-            name="racerName"
-            placeholder="Duck name"
-            pattern="[A-Za-z0-9]{2,16}"
-            minlength="2"
-            maxlength="16"
-            required
-          />
-          <div id="nameError">
-            Name must be 2-16 alphanumeric characters only
-          </div>
 
-          <div
-            class="file-upload-area"
-            onclick="document.getElementById('editDialogImageFile').click()"
-            ondrop="window.game && window.game.handleImageDrop(event, 'edit')"
-            ondragover="window.game && window.game.handleDragOver(event)"
-            ondragleave="window.game && window.game.handleDragLeave(event)"
-          >
-            <div>📷 Click or drag to upload profile picture</div>
-            <div class="upload-hint">Will be resized to 64x64 pixels</div>
-            <div id="editDialogImagePreview"></div>
-          </div>
-          <input
-            type="file"
-            id="editDialogImageFile"
-            accept="image/*"
-            onchange="window.game && window.game.handleImageUpload(event, 'edit')"
-          />
-
-          <label for="editDialogColorPicker" class="color-picker-label"
-            >Select Color 🎨</label
-          >
-          <input
-            type="color"
-            id="editDialogColorPicker"
-            class="color-picker"
-            value="#FFD700"
-          />
-
-          <div class="inventory-section">
-            <h4>Inventory</h4>
-            <div class="inventory-grid">
-              <div class="inventory-item">
-                <div class="inventory-icon">⏩</div>
-                <div class="inventory-count" id="inventory-boost">0</div>
-              </div>
-              <div class="inventory-item">
-                <div class="inventory-icon">💣</div>
-                <div class="inventory-count" id="inventory-bomb">0</div>
-              </div>
-              <div class="inventory-item">
-                <div class="inventory-icon">🌊</div>
-                <div class="inventory-count" id="inventory-splash">0</div>
-              </div>
-              <div class="inventory-item">
-                <div class="inventory-icon">🛡️</div>
-                <div class="inventory-count" id="inventory-immune">0</div>
-              </div>
-              <div class="inventory-item">
-                <div class="inventory-icon">⚡</div>
-                <div class="inventory-count" id="inventory-lightning">0</div>
-              </div>
-              <div class="inventory-item">
-                <div class="inventory-icon">🧲</div>
-                <div class="inventory-count" id="inventory-magnet">0</div>
-              </div>
-              <div class="inventory-item box-inventory-item">
-                <div class="inventory-icon">📦</div>
-                <div class="inventory-count" id="inventory-box">0</div>
-              </div>
+        <div class="settings-scrollable">
+          <form id="editRacerForm">
+            <label for="editDialogRacerName">Name</label>
+            <input
+              type="text"
+              id="editDialogRacerName"
+              name="racerName"
+              placeholder="Duck name"
+              pattern="[A-Za-z0-9]{2,16}"
+              minlength="2"
+              maxlength="16"
+              required
+            />
+            <div id="nameError">
+              Name must be 2-16 alphanumeric characters only
             </div>
-          </div>
 
-          <div class="equipment-section">
-            <h4>Equipment</h4>
-            <div class="equipment-container">
-              <div class="equipment-div"></div>
-              <div class="equipment-div"></div>
-            </div>
-          </div>
-
-          <div class="dialog-buttons">
-            <button
-              type="button"
-              onclick="document.getElementById('editRacerDialog').close()"
+            <div
+              class="file-upload-area"
+              onclick="document.getElementById('editDialogImageFile').click()"
+              ondrop="window.game && window.game.handleImageDrop(event, 'edit')"
+              ondragover="window.game && window.game.handleDragOver(event)"
+              ondragleave="window.game && window.game.handleDragLeave(event)"
             >
-              Cancel
-            </button>
-            <button type="submit" class="giant-update-btn">Update Duck</button>
-          </div>
-        </form>
+              <div>📷 Click or drag to upload profile picture</div>
+              <div class="upload-hint">Will be resized to 64x64 pixels</div>
+              <div id="editDialogImagePreview"></div>
+            </div>
+            <input
+              type="file"
+              id="editDialogImageFile"
+              accept="image/*"
+              onchange="window.game && window.game.handleImageUpload(event, 'edit')"
+            />
+
+            <label for="editDialogColorPicker" class="color-picker-label"
+              >Select Color 🎨</label
+            >
+            <input
+              type="color"
+              id="editDialogColorPicker"
+              class="color-picker"
+              value="#FFD700"
+            />
+
+            <div class="inventory-section">
+              <h4>Inventory</h4>
+              <div class="inventory-grid">
+                <div class="inventory-item">
+                  <div class="inventory-icon">⏩</div>
+                  <div class="inventory-count" id="inventory-boost">0</div>
+                </div>
+                <div class="inventory-item">
+                  <div class="inventory-icon">💣</div>
+                  <div class="inventory-count" id="inventory-bomb">0</div>
+                </div>
+                <div class="inventory-item">
+                  <div class="inventory-icon">🌊</div>
+                  <div class="inventory-count" id="inventory-splash">0</div>
+                </div>
+                <div class="inventory-item">
+                  <div class="inventory-icon">🛡️</div>
+                  <div class="inventory-count" id="inventory-immune">0</div>
+                </div>
+                <div class="inventory-item">
+                  <div class="inventory-icon">⚡</div>
+                  <div class="inventory-count" id="inventory-lightning">0</div>
+                </div>
+                <div class="inventory-item">
+                  <div class="inventory-icon">🧲</div>
+                  <div class="inventory-count" id="inventory-magnet">0</div>
+                </div>
+                <div class="inventory-item box-inventory-item">
+                  <div class="inventory-icon">📦</div>
+                  <div class="inventory-count" id="inventory-box">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="equipment-section">
+              <h4>Equipment</h4>
+              <div class="equipment-container">
+                <div class="equipment-div"></div>
+                <div class="equipment-div"></div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="dialog-buttons">
+          <button
+            type="button"
+            onclick="document.getElementById('editRacerDialog').close()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="giant-update-btn"
+            onclick="window.game && window.game.updateRacerFromDialog(document.getElementById('editRacerDialog').currentRacerId)"
+          >
+            Update
+          </button>
+        </div>
       </div>
     </dialog>
 
