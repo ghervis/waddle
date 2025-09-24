@@ -2082,6 +2082,7 @@ input[type="range"]:hover {
   max-width: 60px;
   cursor: pointer;
   transition: border-color 0.2s ease;
+  user-select: none;
 }
 
 .inventory-item.equipped {
@@ -2139,6 +2140,28 @@ input[type="range"]:hover {
   100% {
     transform: rotate(360deg);
   }
+}
+
+@keyframes addition-fade-down {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+.addition-animation {
+  position: absolute;
+  color: #9acd32;
+  font-size: 16px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 1;
+  animation: addition-fade-down 3s ease-out forwards;
 }
 
 .inventory-icon {

@@ -472,6 +472,10 @@ class DuckRaceGame {
         } else {
           boxItemEl.classList.remove("rotating-gold");
         }
+        // Add click handler for box
+        boxItemEl.addEventListener("click", async () => {
+          await this.handleBoxClick();
+        });
       }
 
       // Initialize equipment tracking
@@ -577,6 +581,126 @@ class DuckRaceGame {
     } else {
       dialog.style.display = "block";
     }
+  }
+
+  async handleBoxClick() {
+    if (!window.okey) return;
+
+    // Fetch the latest profile to get the current box
+    await this.fetchRankedProfile();
+
+    if (!window.rankedRacerInventory) return;
+
+    const boxString = window.rankedRacerInventory.box || "";
+
+    if (!boxString.startsWith(";;") || boxString.length <= 2) {
+      console.log("No box to open");
+      return;
+    }
+
+    // Parse the box string: count occurrences of each digit 0-6
+    const skillCounts = {};
+    for (let i = 0; i <= 6; i++) {
+      skillCounts[i] = 0;
+    }
+    const numbers = boxString.substring(2); // Remove ;;
+    for (const char of numbers) {
+      const digit = parseInt(char);
+      if (digit >= 0 && digit <= 6) {
+        skillCounts[digit]++;
+      }
+    }
+
+    // Create updates for animation effects only
+    const skills = ["boost", "bomb", "splash", "immune", "lightning", "magnet"];
+    const updates = [];
+    skills.forEach((skill, index) => {
+      const addCount = skillCounts[index];
+      if (addCount > 0) {
+        updates.push({ skill, count: addCount });
+      }
+    });
+
+    // Animate the additions (visual effects only, no actual inventory changes)
+    this.animateInventoryAdditions(updates);
+  }
+
+  updateInventoryUI() {
+    if (!window.rankedRacerInventory) return;
+
+    const inventory = window.rankedRacerInventory;
+    const skills = ["boost", "bomb", "splash", "immune", "lightning", "magnet"];
+
+    skills.forEach((skill) => {
+      const count = inventory[skill] || 0;
+      const countEl = document.getElementById(`inventory-${skill}`);
+      if (countEl) {
+        countEl.textContent = count;
+      }
+    });
+
+    // Update box count
+    const boxCount = inventory.box.replace(";;", "").length || 0;
+    const boxCountEl = document.getElementById("inventory-box");
+    if (boxCountEl) {
+      boxCountEl.textContent = boxCount;
+    }
+
+    // Update rotating gold border
+    const boxItemEl = document.querySelector(".box-inventory-item");
+    if (boxItemEl) {
+      if (boxCount > 0) {
+        boxItemEl.classList.add("rotating-gold");
+      } else {
+        boxItemEl.classList.remove("rotating-gold");
+      }
+    }
+  }
+
+  animateInventoryAdditions(updates) {
+    updates.forEach(({ skill, count }) => {
+      const itemEl = document.getElementById(`inventory-item-${skill}`);
+      if (itemEl) {
+        this.createAdditionAnimation(itemEl, count);
+      }
+    });
+  }
+
+  createAdditionAnimation(itemEl, count) {
+    // Create the +n element
+    const animEl = document.createElement("div");
+    animEl.textContent = `+${count}`;
+    animEl.classList.add("addition-animation");
+
+    // Position it on top of the item
+    const rect = itemEl.getBoundingClientRect();
+    const dialog = document.getElementById("editRacerDialog");
+
+    if (!dialog) {
+      return;
+    }
+
+    const additionAnimationElements = dialog.querySelectorAll(
+      ".addition-animation"
+    );
+
+    if (additionAnimationElements.length > 5) {
+      [...additionAnimationElements].forEach((el) => el.remove());
+    }
+
+    const dialogRect = dialog.getBoundingClientRect();
+    animEl.style.left = `${rect.left - dialogRect.left + rect.width / 2}px`;
+    animEl.style.top = `${rect.top - dialogRect.top - 10}px`; // Start above
+    dialog.appendChild(animEl);
+
+    // Add CSS animation class
+
+    // Remove element after animation completes
+    // setTimeout(() => {
+    //   if (animEl.parentNode) {
+    //     animEl.remove();
+    //   }
+    // }, 1000);
   }
 
   // Use race simulator for more accurate race simulation - MANDATORY
@@ -1902,6 +2026,22 @@ class DuckRaceGame {
         }, 100);
       });
     }
+
+    const editRacerDialog = document.getElementById("editRacerDialog");
+
+    editRacerDialog
+      .querySelector(".settings-scrollable")
+      .addEventListener("scroll", (_) =>
+        [...editRacerDialog.querySelectorAll(".addition-animation")].forEach(
+          (el) => el.remove()
+        )
+      );
+
+    editRacerDialog.addEventListener("close", (_) =>
+      [...editRacerDialog.querySelectorAll(".addition-animation")].forEach(
+        (el) => el.remove()
+      )
+    );
   }
 
   ensureGameContinues() {
