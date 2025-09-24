@@ -458,10 +458,20 @@ class DuckRaceGame {
       });
 
       // Handle box inventory
-      const boxCount = inventory.box || 0;
+      const boxCount = inventory.box.replace(";;", "").length || 0;
       const boxCountEl = document.getElementById("inventory-box");
       if (boxCountEl) {
         boxCountEl.textContent = boxCount;
+      }
+
+      // Add rotating gold border if box has amount
+      const boxItemEl = document.querySelector(".box-inventory-item");
+      if (boxItemEl) {
+        if (boxCount > 0) {
+          boxItemEl.classList.add("rotating-gold");
+        } else {
+          boxItemEl.classList.remove("rotating-gold");
+        }
       }
 
       // Initialize equipment tracking

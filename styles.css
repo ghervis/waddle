@@ -2093,6 +2093,54 @@ input[type="range"]:hover {
   margin-left: 16px;
 }
 
+.inventory-item.rotating-gold {
+  position: relative;
+  overflow: hidden;
+}
+
+.inventory-item.rotating-gold::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  border-radius: 8px;
+  background: linear-gradient(gold 50%, white 50%);
+  animation: rotate-gold-border 4s linear infinite;
+  z-index: 1;
+  width: 200%;
+  height: 200%;
+}
+
+.inventory-item.rotating-gold::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 2px;
+  top: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  background: white;
+  border-radius: 5px;
+  z-index: 1;
+}
+
+.inventory-item.rotating-gold > .inventory-icon {
+  z-index: 2;
+}
+
+.inventory-item.rotating-gold > .inventory-count {
+  z-index: 2;
+}
+
+@keyframes rotate-gold-border {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .inventory-icon {
   font-size: 22px;
 }
@@ -2117,7 +2165,7 @@ input[type="range"]:hover {
 
 .equipment-container {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   gap: 20px;
 }
 
