@@ -49,6 +49,9 @@ class DuckRaceGame {
     this.settingsDialog = new SettingsDialog(this);
     this.settingsDialog.loadSettings();
 
+    // Initialize music volume from settings
+    this.musicVolume = this.settingsDialog.musicVolume;
+
     // Load manage mode from localStorage
     this.manageMode = localStorage.getItem("manageMode") || "casual";
 
@@ -140,9 +143,9 @@ class DuckRaceGame {
     profileBtn.style.display = "none";
 
     // Add click handler
-    profileBtn.addEventListener("click", () => {
+    profileBtn.addEventListener("click", async () => {
       if (window.rankedRacerId) {
-        this.editRacer(window.rankedRacerId);
+        await this.editRacer();
       } else {
         console.warn("Ranked racer ID not available");
       }
@@ -221,7 +224,6 @@ class DuckRaceGame {
         targetSlot = "equip1";
       }
     } else {
-      console.log("dialog.equip1:", dialog.equip1, dialog.equip2);
       if ((dialog.equip1 ?? -1) === -1) {
         targetSlot = "equip1";
       } else {
@@ -317,57 +319,17 @@ class DuckRaceGame {
     }
   }
 
-  // Override the existing editRacer method to handle giant button for ranked racer
-  editRacer(id) {
-    // Convert id to string for comparison
-    const racerId = String(id);
+  // Refactored editRacer method - only used for ranked racer profile editing
+  async editRacer() {
+    // Directly use ranked racer data since this method is only called for ranked mode
+    const racer = {
+      id: window.rankedRacerId,
+      name: window.rankedRacerName,
+      color: window.rankedRacerColor,
+      profilePicture: window.rankedRacerProfilePicture,
+    };
 
-    // First try to find in customRacers (casual mode custom racers)
-    let racer = this.customRacers.find((r) => String(r.id) === racerId);
-    let isRankedModeRacer = false;
-    let isCustomRacer = false;
-
-    // If not found in customRacers, check if it's a default racer in casual mode
-    if (!racer && !this.isRankedMode()) {
-      // In casual mode, check if this is a default racer (ID 0-4)
-      const duckIndex = parseInt(racerId);
-      if (
-        duckIndex >= 0 &&
-        duckIndex < 5 &&
-        this.ducks &&
-        this.ducks[duckIndex]
-      ) {
-        const duck = this.ducks[duckIndex];
-        racer = {
-          id: duck.id,
-          name: duck.name,
-          color: duck.color,
-          profilePicture: duck.profilePicture,
-        };
-        isCustomRacer = true;
-      }
-    }
-
-    // If still not found, try to find in ducks array (ranked mode)
-    if (!racer && this.ducks) {
-      const duck = this.ducks.find((d) => String(d.id) === racerId);
-      if (duck) {
-        racer = {
-          id: duck.id,
-          name: duck.name,
-          color: duck.color,
-          profilePicture: duck.profilePicture,
-        };
-        isRankedModeRacer = true;
-      }
-    }
-
-    if (!racer) {
-      console.error("Racer not found:", racerId);
-      return;
-    }
-
-    // Ensure Add dialog is closed if it is open
+    // Ensure Add dialog is closed if open
     const addDlg = document.getElementById("addRacerDialog");
     if (addDlg) {
       if (typeof addDlg.close === "function") {
@@ -384,19 +346,18 @@ class DuckRaceGame {
     }
 
     // Persist state on dialog element
-    dialog.uploadedImage = racer.profilePicture; // Start with existing image
-    dialog.isRankedModeRacer = isRankedModeRacer; // Store for later use
-    dialog.isCustomRacer = isCustomRacer; // Store for later use
-    dialog.currentRacerId = racerId; // Store for button click handler
+    dialog.uploadedImage = racer.profilePicture;
+    dialog.isRankedModeRacer = true;
+    dialog.isCustomRacer = false;
+    dialog.currentRacerId = racer.id;
 
-    // Update title with mode suffix
+    // Fetch latest profile data
+    await this.fetchRankedProfile();
+
+    // Update title
     const titleEl = document.getElementById("editRacerTitle");
     if (titleEl) {
-      if (isRankedModeRacer) {
-        titleEl.textContent = "Edit Your Profile";
-      } else {
-        titleEl.textContent = `Edit Racer${isCustomRacer ? " (Casual)" : ""}`;
-      }
+      titleEl.textContent = "Edit Your Profile";
     }
 
     // Set initial color picker value
@@ -436,114 +397,105 @@ class DuckRaceGame {
           : "";
     }
 
-    // Populate inventory display if in ranked mode
-    if (isRankedModeRacer && window.rankedRacerInventory) {
-      const inventory = window.rankedRacerInventory;
-      const skills = [
+    // Populate inventory display
+    const inventory = window.rankedRacerInventory;
+    const skills = ["boost", "bomb", "splash", "immune", "lightning", "magnet"];
+
+    skills.forEach((skill) => {
+      const count = inventory[skill] || 0;
+      const countEl = document.getElementById(`inventory-${skill}`);
+      if (countEl) {
+        countEl.textContent = count;
+      }
+    });
+
+    // Handle box inventory
+    const boxString = (inventory.box || "").toString();
+    const boxCount = boxString.replace(";;", "").length || 0;
+    const boxCountEl = document.getElementById("inventory-box");
+    if (boxCountEl) {
+      boxCountEl.textContent = boxCount;
+    }
+
+    // Add rotating gold border if box has amount
+    const boxItemEl = document.querySelector(".inventory-item-box");
+    if (boxItemEl) {
+      if (boxCount > 0) {
+        boxItemEl.classList.add("rotating-gold");
+      } else {
+        boxItemEl.classList.remove("rotating-gold");
+      }
+      // Add click handler for box
+      boxItemEl.addEventListener("click", async () => {
+        await this.handleBoxClick();
+      });
+    }
+
+    // Initialize equipment tracking
+    dialog.equippedSkills = new Set();
+    dialog.equip1 =
+      window.rankedRacerEquip1 !== null ? window.rankedRacerEquip1 : null;
+    dialog.equip2 =
+      window.rankedRacerEquip2 !== null ? window.rankedRacerEquip2 : null;
+    dialog.skillClickCounts = {};
+
+    // Initialize equipped skills set based on current equipment
+    if (dialog.equip1 !== null) {
+      const skillName1 = [
         "boost",
         "bomb",
         "splash",
         "immune",
         "lightning",
         "magnet",
-      ];
-      const skillEmojis = ["⏩", "💣", "🌊", "🛡️", "⚡", "🧲"];
-
-      skills.forEach((skill) => {
-        const count = inventory[skill] || 0;
-        const countEl = document.getElementById(`inventory-${skill}`);
-        if (countEl) {
-          countEl.textContent = count;
-        }
-      });
-
-      // Handle box inventory
-      const boxCount = inventory.box.replace(";;", "").length || 0;
-      const boxCountEl = document.getElementById("inventory-box");
-      if (boxCountEl) {
-        boxCountEl.textContent = boxCount;
-      }
-
-      // Add rotating gold border if box has amount
-      const boxItemEl = document.querySelector(".box-inventory-item");
-      if (boxItemEl) {
-        if (boxCount > 0) {
-          boxItemEl.classList.add("rotating-gold");
-        } else {
-          boxItemEl.classList.remove("rotating-gold");
-        }
-        // Add click handler for box
-        boxItemEl.addEventListener("click", async () => {
-          await this.handleBoxClick();
-        });
-      }
-
-      // Initialize equipment tracking
-      dialog.equippedSkills = new Set();
-      dialog.equip1 =
-        window.rankedRacerEquip1 !== null ? window.rankedRacerEquip1 : null;
-      dialog.equip2 =
-        window.rankedRacerEquip2 !== null ? window.rankedRacerEquip2 : null;
-      dialog.skillClickCounts = {}; // Track click counts per skill
-
-      // Initialize equipped skills set based on current equipment
-      if (dialog.equip1 !== null) {
-        const skillName1 = [
-          "boost",
-          "bomb",
-          "splash",
-          "immune",
-          "lightning",
-          "magnet",
-        ][dialog.equip1];
-        dialog.equippedSkills.add(skillName1);
-      }
-      if (dialog.equip2 !== null) {
-        const skillName2 = [
-          "boost",
-          "bomb",
-          "splash",
-          "immune",
-          "lightning",
-          "magnet",
-        ][dialog.equip2];
-        dialog.equippedSkills.add(skillName2);
-      }
-
-      // Add click handlers to inventory items
-      skills.forEach((skill, index) => {
-        const itemEl = document.getElementById(`inventory-item-${skill}`);
-        if (itemEl) {
-          itemEl.addEventListener("click", () => {
-            this.handleSkillEquip(dialog, skill, index);
-          });
-        }
-      });
-
-      // Add click handlers to equipment squares for unequipping
-      const equip1El = document.getElementById("equip1-square");
-      if (equip1El) {
-        equip1El.addEventListener("click", () => {
-          if (dialog.equip1 !== null) {
-            this.handleSkillEquip(dialog, skills[dialog.equip1], dialog.equip1);
-          }
-        });
-      }
-
-      const equip2El = document.getElementById("equip2-square");
-      if (equip2El) {
-        equip2El.addEventListener("click", () => {
-          if (dialog.equip2 !== null) {
-            this.handleSkillEquip(dialog, skills[dialog.equip2], dialog.equip2);
-          }
-        });
-      }
-
-      // Update UI to reflect current equipment state
-      this.updateEquipmentUI(dialog);
+      ][dialog.equip1];
+      dialog.equippedSkills.add(skillName1);
+    }
+    if (dialog.equip2 !== null) {
+      const skillName2 = [
+        "boost",
+        "bomb",
+        "splash",
+        "immune",
+        "lightning",
+        "magnet",
+      ][dialog.equip2];
+      dialog.equippedSkills.add(skillName2);
     }
 
-    // Real-time validation (overwrite previous handlers to avoid duplicates)
+    // Add click handlers to inventory items
+    skills.forEach((skill, index) => {
+      const itemEl = document.getElementById(`inventory-item-${skill}`);
+      if (itemEl) {
+        itemEl.addEventListener("click", () => {
+          this.handleSkillEquip(dialog, skill, index);
+        });
+      }
+    });
+
+    // Add click handlers to equipment squares for unequipping
+    const equip1El = document.getElementById("equip1-square");
+    if (equip1El) {
+      equip1El.addEventListener("click", () => {
+        if (dialog.equip1 !== null) {
+          this.handleSkillEquip(dialog, skills[dialog.equip1], dialog.equip1);
+        }
+      });
+    }
+
+    const equip2El = document.getElementById("equip2-square");
+    if (equip2El) {
+      equip2El.addEventListener("click", () => {
+        if (dialog.equip2 !== null) {
+          this.handleSkillEquip(dialog, skills[dialog.equip2], dialog.equip2);
+        }
+      });
+    }
+
+    // Update UI to reflect current equipment state
+    this.updateEquipmentUI(dialog);
+
+    // Real-time validation
     if (nameInput) {
       nameInput.oninput = () => {
         const value = nameInput.value;
@@ -559,18 +511,11 @@ class DuckRaceGame {
       };
     }
 
-    // Form submission handler removed - using button onclick instead
-
-    // Update submit button styling for ranked racer
+    // Update submit button styling
     const submitBtn = form.querySelector('button[type="submit"]');
     if (submitBtn) {
-      if (isRankedModeRacer) {
-        submitBtn.classList.add("giant-update-btn");
-        submitBtn.textContent = "Update Profile";
-      } else {
-        submitBtn.classList.remove("giant-update-btn");
-        submitBtn.textContent = "Update Duck";
-      }
+      submitBtn.classList.add("giant-update-btn");
+      submitBtn.textContent = "Update Profile";
     }
 
     // Focus and open the dialog
@@ -586,42 +531,68 @@ class DuckRaceGame {
   async handleBoxClick() {
     if (!window.okey) return;
 
-    // Fetch the latest profile to get the current box
-    await this.fetchRankedProfile();
+    // Check if box is empty
+    const currentInventory = window.rankedRacerInventory || {};
+    const boxCount = currentInventory.box.replace(";;", "").length || 0;
+    if (boxCount <= 0) return;
 
-    if (!window.rankedRacerInventory) return;
+    // Get before inventory
+    const beforeInventory = { ...window.rankedRacerInventory };
 
-    const boxString = window.rankedRacerInventory.box || "";
-
-    if (!boxString.startsWith(";;") || boxString.length <= 2) {
-      console.log("No box to open");
+    // Call openBox API
+    const data = await this.openBox();
+    if (!data) {
+      console.error("Failed to open box");
       return;
     }
 
-    // Parse the box string: count occurrences of each digit 0-6
-    const skillCounts = {};
-    for (let i = 0; i <= 6; i++) {
-      skillCounts[i] = 0;
+    // Update inventory from response like fetchRankedProfile
+    localStorage.setItem("rankedRacerId", data.id);
+    localStorage.setItem("rankedRacerName", data.name);
+    localStorage.setItem(
+      "rankedRacerProfilePicture",
+      data.profilePicture || ""
+    );
+    localStorage.setItem("rankedRacerColor", data.color || "");
+    localStorage.setItem("rankedRacerMmr", data.mmr || 0);
+    const inventory = {
+      boost: data.boost || 0,
+      bomb: data.bomb || 0,
+      splash: data.splash || 0,
+      immune: data.immune || 0,
+      lightning: data.lightning || 0,
+      magnet: data.magnet || 0,
+      box: data.box || 0,
+    };
+    localStorage.setItem("rankedRacerInventory", JSON.stringify(inventory));
+
+    // Store equipment data if available
+    if (data.equip1 !== undefined) {
+      localStorage.setItem("rankedRacerEquip1", data.equip1);
     }
-    const numbers = boxString.substring(2); // Remove ;;
-    for (const char of numbers) {
-      const digit = parseInt(char);
-      if (digit >= 0 && digit <= 6) {
-        skillCounts[digit]++;
-      }
+    if (data.equip2 !== undefined) {
+      localStorage.setItem("rankedRacerEquip2", data.equip2);
     }
 
-    // Create updates for animation effects only
+    this.setWindowRacerData();
+    this.updateRankedProfileButton();
+
+    // Compute before and after amounts
     const skills = ["boost", "bomb", "splash", "immune", "lightning", "magnet"];
     const updates = [];
-    skills.forEach((skill, index) => {
-      const addCount = skillCounts[index];
+    skills.forEach((skill) => {
+      const beforeCount = beforeInventory[skill] || 0;
+      const afterCount = inventory[skill] || 0;
+      const addCount = afterCount - beforeCount;
       if (addCount > 0) {
         updates.push({ skill, count: addCount });
       }
     });
 
-    // Animate the additions (visual effects only, no actual inventory changes)
+    // Update inventory UI view
+    this.updateInventoryUI();
+
+    // Animate inventory additions
     this.animateInventoryAdditions(updates);
   }
 
@@ -640,14 +611,15 @@ class DuckRaceGame {
     });
 
     // Update box count
-    const boxCount = inventory.box.replace(";;", "").length || 0;
+    const boxString = (inventory.box || "").toString();
+    const boxCount = boxString.replace(";;", "").length || 0;
     const boxCountEl = document.getElementById("inventory-box");
     if (boxCountEl) {
       boxCountEl.textContent = boxCount;
     }
 
     // Update rotating gold border
-    const boxItemEl = document.querySelector(".box-inventory-item");
+    const boxItemEl = document.querySelector(".inventory-item-box");
     if (boxItemEl) {
       if (boxCount > 0) {
         boxItemEl.classList.add("rotating-gold");
@@ -1474,6 +1446,12 @@ class DuckRaceGame {
 
   // Handle music volume changes from slider
   onMusicVolumeChange(newVolume) {
+    // Ensure newVolume is finite and clamped to 0-1
+    if (!isFinite(newVolume)) {
+      newVolume = 0.3; // Default
+    }
+    newVolume = Math.max(0, Math.min(1, newVolume));
+
     if (this.masterMuted && newVolume > 0) {
       // If muted and sliding to >0, unmute
       this.masterMuteToggle();
@@ -2722,7 +2700,6 @@ class DuckRaceGame {
       console.log("🎮 Online ranked race response:", data);
       return data;
     } catch (error) {
-      console.log(error.status);
       console.error("❌ Error creating online ranked race:", error);
       throw error;
     }
@@ -3823,6 +3800,11 @@ class DuckRaceGame {
     this.fetchOnlineLeaderboard();
   }
 
+  resetCamera() {
+    this.cameraX = 0;
+    this.draw();
+  }
+
   publishToDiscord(standings) {
     if (
       !this.settingsDialog.settings.discordWebhookUrl ||
@@ -4258,7 +4240,7 @@ class DuckRaceGame {
       fetchProfileUrl
     )}`;
 
-    this.cachedFetch(corsProxyUrl, {}, `fetch_profile_${window.okey}`, 30000)
+    this.cachedFetch(corsProxyUrl, {}, `fetch_profile_${window.okey}`, 15000)
       .then((data) => {
         localStorage.setItem("rankedRacerId", data.id);
         localStorage.setItem("rankedRacerName", data.name);
@@ -4275,7 +4257,7 @@ class DuckRaceGame {
           immune: data.immune || 0,
           lightning: data.lightning || 0,
           magnet: data.magnet || 0,
-          box: data.box || 0,
+          box: data.box || ";;",
         };
         localStorage.setItem("rankedRacerInventory", JSON.stringify(inventory));
 
@@ -4291,6 +4273,30 @@ class DuckRaceGame {
         this.updateRankedProfileButton();
       })
       .catch((error) => console.error("Error fetching profile:", error));
+  }
+
+  async openBox() {
+    if (!window.okey) {
+      return;
+    }
+
+    const openBoxUrl = `https://waddle-waddle.vercel.app/api/v1/open-box?okey=${window.okey}`;
+    const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
+      openBoxUrl
+    )}`;
+
+    try {
+      return await this.cachedFetch(
+        corsProxyUrl,
+        {},
+        `open_box_${window.okey}`,
+        30000
+      );
+    } catch (error) {
+      console.error("Error opening box:", error);
+    }
+
+    return null;
   }
 
   updateOnlineLeaderboard() {
@@ -4644,10 +4650,13 @@ class DuckRaceGame {
     }
 
     // Clear pending additions when dialog is closed without applying
-    dialog.addEventListener("close", () => {
-      this.pendingManageAdditions = [];
-      this.pendingHiddenToggles.clear();
-    });
+    if (!dialog.dataset.closeListenerAdded) {
+      dialog.addEventListener("close", () => {
+        this.pendingManageAdditions = [];
+        this.pendingHiddenToggles.clear();
+      });
+      dialog.dataset.closeListenerAdded = "true";
+    }
   }
 
   setupManageModeToggle() {
@@ -4682,11 +4691,14 @@ class DuckRaceGame {
       }
     }
 
-    // Add event listener
-    toggle.addEventListener("change", async () => {
-      this.manageMode = toggle.checked ? "discord" : "casual";
-      await this.renderManageRacers();
-    });
+    // Add event listener only if not already added
+    if (!toggle.dataset.listenerAdded) {
+      toggle.addEventListener("change", async () => {
+        this.manageMode = toggle.checked ? "discord" : "casual";
+        await this.renderManageRacers();
+      });
+      toggle.dataset.listenerAdded = "true";
+    }
   }
 
   async renderManageRacers() {
@@ -4706,8 +4718,8 @@ class DuckRaceGame {
 
       let discordMembers = null;
       try {
-        // Force fresh fetch when opening manage dialog to ensure up-to-date data
-        discordMembers = await this.fetchDiscordMembers(true);
+        // Use cached fetch for Discord members (15 seconds cache)
+        discordMembers = await this.fetchDiscordMembers();
 
         if (discordMembers && discordMembers.members) {
           models = [];
@@ -5581,36 +5593,6 @@ class DuckRaceGame {
       }
     }
 
-    // Handle add-row (new)
-    // const newNameEl = document.getElementById("manageName-new");
-    // const newColorEl = document.getElementById("manageColor-new");
-    // if (newNameEl && newColorEl) {
-    //   const rawName = newNameEl.value.trim();
-    //   if (rawName.length > 0) {
-    //     if (!/^[A-Za-z0-9]{2,16}$/.test(rawName)) {
-    //       alert("New duck name must be 2-16 alphanumeric characters.");
-    //       newNameEl.focus();
-    //       return;
-    //     }
-    //     const uniqueName = ensureUniqueInSet(rawName);
-    //     const color = newColorEl.value || "#FFD700";
-    //     const picture =
-    //       (this.manageTemp &&
-    //         this.manageTemp["new"] &&
-    //         this.manageTemp["new"].imageData) ||
-    //       null;
-
-    //     // Push without calling addRacer (we will rebuild once at the end)
-    //     const newRacer = {
-    //       id: Date.now() + Math.floor(Math.random() * 1000),
-    //       name: uniqueName,
-    //       color,
-    //       profilePicture: picture,
-    //     };
-    //     this.customRacers.push(newRacer);
-    //   }
-    // }
-
     // Handle dynamic temp rows
     const tempRows = Array.from(
       container.querySelectorAll(".manage-row[data-type='temp']")
@@ -5749,6 +5731,8 @@ class DuckRaceGame {
     this.saveHiddenDiscordRacers();
     this.pendingHiddenToggles.clear();
 
+    this.resetCamera();
+
     // Close the dialog to signal that editing is done
     const dialog = document.getElementById("manageDialog");
     if (dialog && typeof dialog.close === "function") {
@@ -5791,41 +5775,56 @@ class DuckRaceGame {
     const key = cacheKey || `cache_${btoa(url).replace(/[^a-zA-Z0-9]/g, "_")}`;
     const now = Date.now();
 
-    // Check for cached data
-    const cached = localStorage.getItem(key);
-    if (cached) {
-      try {
-        const { data, timestamp } = JSON.parse(cached);
-        if (now - timestamp < cacheDuration) {
-          return data;
+    if (!this.ongoingFetches) {
+      this.ongoingFetches = new Map();
+    }
+
+    if (this.ongoingFetches.has(key)) {
+      return this.ongoingFetches.get(key);
+    }
+
+    const promise = (async () => {
+      // Check for cached data
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (now - timestamp < cacheDuration) {
+            this.ongoingFetches.delete(key);
+            return data;
+          }
+        } catch (e) {
+          console.warn("Failed to parse cached data:", e);
         }
-      } catch (e) {
-        console.warn("Failed to parse cached data:", e);
       }
-    }
 
-    // Fetch new data
-    const response = await fetch(url, options);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+      // Fetch new data
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    const data = await response.json();
+      const data = await response.json();
 
-    // Cache the data
-    try {
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          data,
-          timestamp: now,
-        })
-      );
-    } catch (e) {
-      console.warn("Failed to cache data:", e);
-    }
+      // Cache the data
+      try {
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            data,
+            timestamp: now,
+          })
+        );
+      } catch (e) {
+        console.warn("Failed to cache data:", e);
+      }
 
-    return data;
+      this.ongoingFetches.delete(key);
+      return data;
+    })();
+
+    this.ongoingFetches.set(key, promise);
+    return promise;
   }
 
   async fetchDiscordMembers(noCache = false) {
@@ -5842,7 +5841,7 @@ class DuckRaceGame {
         discordWebhookUrl,
         {},
         "discord_webhook_info",
-        noCache ? 0 : 30000
+        noCache ? 0 : 15000
       );
 
       webhookId = jsonResponse.id;
@@ -5857,49 +5856,75 @@ class DuckRaceGame {
       throw new Error("Invalid webhook ID or token.");
     }
 
+    if (!this.ongoingMembersFetches) {
+      this.ongoingMembersFetches = new Map();
+    }
+
+    const membersKey = `discord_members_${webhookId}`;
+
     let jsonResponse = null;
 
-    try {
-      const apiUrl = `https://waddle-waddle.vercel.app/api/v1/discord-server-members/${webhookId}/${webhookToken}`;
-      const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
-        apiUrl
-      )}`;
-
-      // Custom fetch with error handling for inviteUrl
-      const response = await fetch(corsProxyUrl);
-      if (!response.ok) {
-        let errorData = null;
-        try {
-          errorData = await response.json();
-        } catch (e) {}
-        if (errorData && errorData.inviteUrl) {
-          window.alert(
-            `Bot may not be invited to that server. Invite URL: ${errorData.inviteUrl}`
-          );
+    if (this.ongoingMembersFetches.has(membersKey)) {
+      jsonResponse = await this.ongoingMembersFetches.get(membersKey);
+    } else {
+      const promise = (async () => {
+        // Check for cached data
+        const cached = localStorage.getItem(membersKey);
+        if (cached && !noCache) {
+          try {
+            const { data, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < 15000) {
+              return data;
+            }
+          } catch (e) {
+            console.warn("Failed to parse cached members data:", e);
+          }
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      jsonResponse = await response.json();
 
-      // Cache manually if not noCache
-      if (!noCache) {
-        const cacheKey = `discord_members_${webhookId}`;
-        const now = Date.now();
-        try {
-          localStorage.setItem(
-            cacheKey,
-            JSON.stringify({
-              data: jsonResponse,
-              timestamp: now,
-            })
-          );
-        } catch (e) {
-          console.warn("Failed to cache Discord members data:", e);
+        // Fetch new data
+        const apiUrl = `https://waddle-waddle.vercel.app/api/v1/discord-server-members/${webhookId}/${webhookToken}`;
+        const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
+          apiUrl
+        )}`;
+
+        const response = await fetch(corsProxyUrl);
+        if (!response.ok) {
+          let errorData = null;
+          try {
+            errorData = await response.json();
+          } catch (e) {}
+          if (errorData && errorData.inviteUrl) {
+            window.alert(
+              `Bot may not be invited to that server. Invite URL: ${errorData.inviteUrl}`
+            );
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      }
-    } catch (error) {
-      console.error("Error fetching Discord members:", error);
-      throw error;
+
+        const data = await response.json();
+
+        // Cache the data
+        if (!noCache) {
+          const now = Date.now();
+          try {
+            localStorage.setItem(
+              membersKey,
+              JSON.stringify({
+                data,
+                timestamp: now,
+              })
+            );
+          } catch (e) {
+            console.warn("Failed to cache members data:", e);
+          }
+        }
+
+        return data;
+      })();
+
+      this.ongoingMembersFetches.set(membersKey, promise);
+      jsonResponse = await promise;
+      this.ongoingMembersFetches.delete(membersKey);
     }
 
     return {
@@ -5925,7 +5950,7 @@ window.importProfile = async () => {
       corsProxyFetchProfileUrlUrl,
       {},
       `fetch_profile_${okeyValue}`,
-      30000
+      15000
     );
 
     window.localStorage.setItem("rankedRacerId", jsonResponse.id);

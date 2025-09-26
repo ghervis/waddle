@@ -22,7 +22,10 @@ class SettingsDialog {
 
     // Load master volume settings
     this.masterMuted = localStorage.getItem("volumeMuted") === "true";
-    this.musicVolume = parseFloat(localStorage.getItem("musicVolume")) || 0.3;
+    const parsedVolume = parseFloat(localStorage.getItem("musicVolume"));
+    this.musicVolume = isFinite(parsedVolume)
+      ? Math.max(0, Math.min(1, parsedVolume))
+      : 0.3;
   }
 
   saveSettings() {

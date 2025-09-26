@@ -2090,8 +2090,13 @@ input[type="range"]:hover {
   background: rgba(76, 175, 80, 0.1);
 }
 
-.box-inventory-item {
+.inventory-item-box {
   margin-left: 16px;
+}
+
+.inventory-item-box:not(.rotating-gold) {
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 .inventory-item.rotating-gold {
