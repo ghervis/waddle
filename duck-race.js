@@ -303,7 +303,7 @@ class DuckRaceGame {
 
     console.log(dialog.equip1, dialog.equip2);
 
-    if ("number" === typeof dialog.equip1 && dialog.equip1 > 0) {
+    if ("number" === typeof dialog.equip1 && dialog.equip1 >= 0) {
       equip1El.textContent = skillEmojis[dialog.equip1];
       equip1El.style.border = "2px solid #4CAF50";
 
@@ -320,7 +320,7 @@ class DuckRaceGame {
       equip1CdEl.style.display = "none";
     }
 
-    if ("number" === typeof dialog.equip2 && dialog.equip2 > 0) {
+    if ("number" === typeof dialog.equip2 && dialog.equip2 >= 0) {
       equip2El.textContent = skillEmojis[dialog.equip2];
       equip2El.style.border = "2px solid #4CAF50";
 
