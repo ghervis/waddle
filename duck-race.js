@@ -303,40 +303,43 @@ class DuckRaceGame {
     const equip2El = document.getElementById("equip2-square");
     const equip2CdEl = document.getElementById("equip2-cd");
 
-    console.log(dialog.equip1, dialog.equip2);
-
     if ("number" === typeof dialog.equip1 && dialog.equip1 >= 0) {
-      equip1El.textContent = skillEmojis[dialog.equip1];
-      equip1El.style.border = "2px solid #4CAF50";
-
-      const skillName = skills[dialog.equip1];
-      const count = Math.min(inventory[skillName] || 0, 2000);
-      const reduction = Math.max(parseFloat((count / 1000).toFixed(2)), 0.01);
-      equip1CdEl.textContent = `-${reduction.toFixed(2)}s CD`;
-      equip1CdEl.style.display = "block";
+      setEquipItemStyle(equip1El, dialog.equip1);
+      setEquipCooldownText(equip1CdEl, dialog.equip1);
     } else {
-      equip1El.textContent = "";
-      equip1El.style.border = "2px solid #ddd";
-
-      equip1CdEl.textContent = "";
-      equip1CdEl.style.display = "none";
+      unsetEquipItemStyle(equip1El);
+      unsetEquipCooldownText(equip1CdEl);
     }
 
     if ("number" === typeof dialog.equip2 && dialog.equip2 >= 0) {
-      equip2El.textContent = skillEmojis[dialog.equip2];
-      equip2El.style.border = "2px solid #4CAF50";
+      setEquipItemStyle(equip2El, dialog.equip2);
+      setEquipCooldownText(equip2CdEl, dialog.equip2);
+    } else {
+      unsetEquipItemStyle(equip2El);
+      unsetEquipCooldownText(equip2CdEl);
+    }
 
-      const skillName = skills[dialog.equip2];
+    function setEquipItemStyle(element, skillIndex) {
+      element.textContent = skillEmojis[skillIndex];
+      element.style.border = `2px solid #4CAF50`;
+    }
+
+    function setEquipCooldownText(element, skillIndex) {
+      const skillName = skills[skillIndex];
       const count = Math.min(inventory[skillName] || 0, 2000);
       const reduction = Math.max(parseFloat((count / 1000).toFixed(2)), 0.01);
-      equip2CdEl.textContent = `-${reduction.toFixed(2)}s CD`;
-      equip2CdEl.style.display = "block";
-    } else {
-      equip2El.textContent = "";
-      equip2El.style.border = "2px solid #ddd";
+      element.textContent = `-${reduction.toFixed(2)}s CD`;
+      element.style.display = "block";
+    }
 
-      equip2CdEl.textContent = "";
-      equip2CdEl.style.display = "none";
+    function unsetEquipItemStyle(element) {
+      element.textContent = "";
+      element.style.border = "2px solid #ddd";
+    }
+
+    function unsetEquipCooldownText(element) {
+      element.textContent = "";
+      element.style.display = "none";
     }
   }
 
@@ -612,6 +615,12 @@ class DuckRaceGame {
 
     // Update inventory UI view
     this.updateInventoryUI();
+
+    // Update equipment UI to reflect new cooldowns
+    const dialog = document.getElementById("editRacerDialog");
+    if (dialog) {
+      this.updateEquipmentUI(dialog);
+    }
 
     // Animate inventory additions
     this.animateInventoryAdditions(updates);
