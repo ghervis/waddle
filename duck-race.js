@@ -309,7 +309,7 @@ class DuckRaceGame {
 
       const skillName = skills[dialog.equip1];
       const count = Math.min(inventory[skillName] || 0, 2000);
-      const reduction = Math.max(count / 1000, 0.01);
+      const reduction = Math.max(parseFloat((count / 1000).toFixed(2)), 0.01);
       equip1CdEl.textContent = `-${reduction.toFixed(2)}s CD`;
       equip1CdEl.style.display = "block";
     } else {
@@ -326,7 +326,7 @@ class DuckRaceGame {
 
       const skillName = skills[dialog.equip2];
       const count = Math.min(inventory[skillName] || 0, 2000);
-      const reduction = Math.max(count / 1000, 0.01);
+      const reduction = Math.max(parseFloat((count / 1000).toFixed(2)), 0.01);
       equip2CdEl.textContent = `-${reduction.toFixed(2)}s CD`;
       equip2CdEl.style.display = "block";
     } else {
