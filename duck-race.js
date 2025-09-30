@@ -281,6 +281,7 @@ class DuckRaceGame {
   updateEquipmentUI(dialog) {
     const skills = ["boost", "bomb", "splash", "immune", "lightning", "magnet"];
     const skillEmojis = ["⏩", "💣", "🌊", "🛡️", "⚡", "🧲"];
+    const inventory = window.rankedRacerInventory || {};
 
     // Update inventory item styles
     skills.forEach((skill) => {
@@ -296,26 +297,44 @@ class DuckRaceGame {
 
     // Update equipment squares
     const equip1El = document.getElementById("equip1-square");
+    const equip1CdEl = document.getElementById("equip1-cd");
     const equip2El = document.getElementById("equip2-square");
+    const equip2CdEl = document.getElementById("equip2-cd");
 
-    if (equip1El) {
-      if (dialog.equip1 !== null) {
-        equip1El.textContent = skillEmojis[dialog.equip1];
-        equip1El.style.border = "2px solid #4CAF50";
-      } else {
-        equip1El.textContent = "";
-        equip1El.style.border = "2px solid #ddd";
-      }
+    console.log(dialog.equip1, dialog.equip2);
+
+    if ("number" === typeof dialog.equip1 && dialog.equip1 > 0) {
+      equip1El.textContent = skillEmojis[dialog.equip1];
+      equip1El.style.border = "2px solid #4CAF50";
+
+      const skillName = skills[dialog.equip1];
+      const count = Math.min(inventory[skillName] || 0, 2000);
+      const reduction = Math.max(count / 1000, 0.01);
+      equip1CdEl.textContent = `-${reduction.toFixed(2)}s CD`;
+      equip1CdEl.style.display = "block";
+    } else {
+      equip1El.textContent = "";
+      equip1El.style.border = "2px solid #ddd";
+
+      equip1CdEl.textContent = "";
+      equip1CdEl.style.display = "none";
     }
 
-    if (equip2El) {
-      if (dialog.equip2 !== null) {
-        equip2El.textContent = skillEmojis[dialog.equip2];
-        equip2El.style.border = "2px solid #4CAF50";
-      } else {
-        equip2El.textContent = "";
-        equip2El.style.border = "2px solid #ddd";
-      }
+    if ("number" === typeof dialog.equip2 && dialog.equip2 > 0) {
+      equip2El.textContent = skillEmojis[dialog.equip2];
+      equip2El.style.border = "2px solid #4CAF50";
+
+      const skillName = skills[dialog.equip2];
+      const count = Math.min(inventory[skillName] || 0, 2000);
+      const reduction = Math.max(count / 1000, 0.01);
+      equip2CdEl.textContent = `-${reduction.toFixed(2)}s CD`;
+      equip2CdEl.style.display = "block";
+    } else {
+      equip2El.textContent = "";
+      equip2El.style.border = "2px solid #ddd";
+
+      equip2CdEl.textContent = "";
+      equip2CdEl.style.display = "none";
     }
   }
 

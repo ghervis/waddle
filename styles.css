@@ -2197,6 +2197,13 @@ input[type="range"]:hover {
   gap: 20px;
 }
 
+.equipment-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
 .equipment-square {
   width: 120px;
   height: 120px;
@@ -2210,4 +2217,12 @@ input[type="range"]:hover {
   font-weight: bold;
   color: #333;
   transition: border-color 0.2s ease;
+}
+
+.equipment-cd {
+  font-size: 12px;
+  color: #666;
+  font-weight: bold;
+  text-align: center;
+  min-height: 14px;
 }
