@@ -98,6 +98,8 @@ class DuckRaceGame {
       JSON.parse(localStorage.getItem("hiddenDiscordRacers") || "[]")
     );
 
+    this.recentRankRaceId = "";
+
     // Initially disable start button until racers are populated
     this.toggleStartBtn(false);
 
@@ -2850,6 +2852,8 @@ class DuckRaceGame {
           throw new Error("Invalid response from online ranked race API");
         }
 
+        this.recentRankRaceId = this.onlineRaceData.id;
+
         // Step 2: Populate racers from the standings response field
         this.log(
           `🏆 Loading ${this.onlineRaceData.standings.length} ranked racers...`
@@ -4254,12 +4258,17 @@ class DuckRaceGame {
       window.localStorage.getItem("rankedRacerEquip1") || ""
     }${window.localStorage.getItem("rankedRacerEquip2") || ""}`;
 
-    const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}&_cb=${cacheBustFetchProfileWithEquip1AndEquip2}`;
+    const fetchProfileUrl = `https://waddle-waddle.vercel.app/api/v1/fetch-profile?okey=${window.okey}&_cb=${cacheBustFetchProfileWithEquip1AndEquip2}${this.recentRankRaceId}`;
     const corsProxyUrl = `https://corsproxy.io/?${encodeURIComponent(
       fetchProfileUrl
     )}`;
 
-    this.cachedFetch(corsProxyUrl, {}, `fetch_profile_${window.okey}`, 15000)
+    this.cachedFetch(
+      corsProxyUrl,
+      {},
+      `fetch_profile_${window.okey}&_cb=${cacheBustFetchProfileWithEquip1AndEquip2}${this.recentRankRaceId}`,
+      15000
+    )
       .then((data) => {
         localStorage.setItem("rankedRacerId", data.id);
         localStorage.setItem("rankedRacerName", data.name);
