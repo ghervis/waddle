@@ -2884,10 +2884,21 @@ class DuckRaceGame {
     this.onlineRaceData = null;
 
     if (this.isRankedMode()) {
+      // Show loading spinner for ranked mode
+      const overlay = document.getElementById("rankedRaceLoadingOverlay");
+      if (overlay) {
+        overlay.style.display = "flex";
+      }
+
       // Ranked mode: Check if ranked racer data is available
       if (!window.rankedRacerId || !window.rankedRacerName) {
         alert("Ranked racer data is not available. Please refresh the page.");
         this.toggleStartBtn(true);
+        // Hide loading spinner
+        const overlay = document.getElementById("rankedRaceLoadingOverlay");
+        if (overlay) {
+          overlay.style.display = "none";
+        }
         return;
       }
 
@@ -2918,6 +2929,11 @@ class DuckRaceGame {
         this.log(`❌ Failed to start ranked race: ${error.message}`);
         alert(`Failed to start ranked race: ${error.message}`);
         this.toggleStartBtn(true);
+        // Hide loading spinner
+        const overlay = document.getElementById("rankedRaceLoadingOverlay");
+        if (overlay) {
+          overlay.style.display = "none";
+        }
         return;
       }
     } else {
@@ -2927,6 +2943,15 @@ class DuckRaceGame {
         return;
       }
     }
+
+    // Hide loading spinner for ranked mode
+    if (this.isRankedMode()) {
+      const overlay = document.getElementById("rankedRaceLoadingOverlay");
+      if (overlay) {
+        overlay.style.display = "none";
+      }
+    }
+
     this.clearLog();
 
     // For ranked mode with online race data, use the simulation from the API response
