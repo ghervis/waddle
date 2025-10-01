@@ -210,10 +210,8 @@ class DuckRaceGame {
 
     // Check if both slots are filled (not null and not -1)
     const bothSlotsFilled =
-      dialog.equip1 !== null &&
-      dialog.equip1 !== -1 &&
-      dialog.equip2 !== null &&
-      dialog.equip2 !== -1;
+      window.notNullAndNotNegativeOne(dialog.equip1) &&
+      window.notNullAndNotNegativeOne(dialog.equip2);
 
     if (bothSlotsFilled) {
       // When both slots are filled, replace the opposite of the most recently changed slot
@@ -250,7 +248,7 @@ class DuckRaceGame {
         // Remove the skill from the target slot
         const oldSkillIndex =
           targetSlot === "equip1" ? dialog.equip1 : dialog.equip2;
-        if (oldSkillIndex !== null) {
+        if (window.notNullAndNotNegativeOne(oldSkillIndex)) {
           const oldSkillName = [
             "boost",
             "bomb",
@@ -464,7 +462,7 @@ class DuckRaceGame {
     dialog.skillClickCounts = {};
 
     // Initialize equipped skills set based on current equipment
-    if (dialog.equip1 !== null) {
+    if (window.notNullAndNotNegativeOne(dialog.equip1)) {
       const skillName1 = [
         "boost",
         "bomb",
@@ -475,7 +473,7 @@ class DuckRaceGame {
       ][dialog.equip1];
       dialog.equippedSkills.add(skillName1);
     }
-    if (dialog.equip2 !== null) {
+    if (window.notNullAndNotNegativeOne(dialog.equip2)) {
       const skillName2 = [
         "boost",
         "bomb",
@@ -500,7 +498,7 @@ class DuckRaceGame {
     const equip1El = document.getElementById("equip1-square");
     if (equip1El) {
       this.addEventListenerToElement(equip1El, "click", () => {
-        if (dialog.equip1 !== null) {
+        if (window.notNullAndNotNegativeOne(dialog.equip1)) {
           this.handleSkillEquip(dialog, skills[dialog.equip1], dialog.equip1);
         }
       });
@@ -509,7 +507,7 @@ class DuckRaceGame {
     const equip2El = document.getElementById("equip2-square");
     if (equip2El) {
       this.addEventListenerToElement(equip2El, "click", () => {
-        if (dialog.equip2 !== null) {
+        if (window.notNullAndNotNegativeOne(dialog.equip2)) {
           this.handleSkillEquip(dialog, skills[dialog.equip2], dialog.equip2);
         }
       });
@@ -2553,12 +2551,12 @@ class DuckRaceGame {
 
       // Save equipment data to localStorage
       const dialog = document.getElementById("editRacerDialog");
-      if (dialog && dialog.equip1 !== null) {
+      if (dialog && window.notNullAndNotNegativeOne(dialog.equip1)) {
         window.localStorage.setItem("rankedRacerEquip1", dialog.equip1);
       } else {
         window.localStorage.removeItem("rankedRacerEquip1");
       }
-      if (dialog && dialog.equip2 !== null) {
+      if (dialog && window.notNullAndNotNegativeOne(dialog.equip2)) {
         window.localStorage.setItem("rankedRacerEquip2", dialog.equip2);
       } else {
         window.localStorage.removeItem("rankedRacerEquip2");

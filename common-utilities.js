@@ -30,3 +30,5 @@ window.rgbToHex = (rgbString) => {
 };
 
 window.pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+window.notNullAndNotNegativeOne = (value) => value !== null && value !== -1;
