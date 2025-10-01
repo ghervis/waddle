@@ -373,6 +373,19 @@ class DuckRaceGame {
     dialog.isCustomRacer = false;
     dialog.currentRacerId = racer.id;
 
+    // Show the dialog first
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+    } else {
+      dialog.style.display = "block";
+    }
+
+    // Show loading overlay
+    const overlay = document.getElementById("editRacerOverlay");
+    if (overlay) {
+      overlay.style.display = "flex";
+    }
+
     // Fetch latest profile data
     await this.fetchRankedProfile();
 
@@ -539,14 +552,14 @@ class DuckRaceGame {
       submitBtn.textContent = "Update Profile";
     }
 
-    // Focus and open the dialog
+    // Hide loading overlay
+    if (overlay) {
+      overlay.style.display = "none";
+    }
+
+    // Focus on name field
     const nameField = document.getElementById("editDialogRacerName");
     if (nameField) nameField.focus();
-    if (typeof dialog.showModal === "function") {
-      dialog.showModal();
-    } else {
-      dialog.style.display = "block";
-    }
   }
 
   async handleBoxClick() {
@@ -557,6 +570,12 @@ class DuckRaceGame {
     const boxCount = currentInventory.box.replace(";;", "").length || 0;
     if (boxCount <= 0) return;
 
+    // Show loading overlay
+    const overlay = document.getElementById("editRacerOverlay");
+    if (overlay) {
+      overlay.style.display = "flex";
+    }
+
     // Get before inventory
     const beforeInventory = { ...window.rankedRacerInventory };
 
@@ -564,6 +583,10 @@ class DuckRaceGame {
     const data = await this.openBox();
     if (!data) {
       console.error("Failed to open box");
+      // Hide loading overlay on error
+      if (overlay) {
+        overlay.style.display = "none";
+      }
       return;
     }
 
@@ -621,6 +644,11 @@ class DuckRaceGame {
 
     // Animate inventory additions
     this.animateInventoryAdditions(updates);
+
+    // Hide loading overlay
+    if (overlay) {
+      overlay.style.display = "none";
+    }
   }
 
   updateInventoryUI() {
@@ -2511,6 +2539,12 @@ class DuckRaceGame {
     }
 
     if (this.isRankedMode() && id === window.rankedRacerId) {
+      // Show loading overlay
+      const overlay = document.getElementById("editRacerOverlay");
+      if (overlay) {
+        overlay.style.display = "flex";
+      }
+
       const updateRacerUrl = `https://waddle-waddle.vercel.app/api/v1/update-racer?okey=${window.okey}`;
       const corsProxyUpdateRacerUrl = `https://corsproxy.io/?${encodeURIComponent(
         updateRacerUrl
@@ -2542,6 +2576,10 @@ class DuckRaceGame {
         localStorage.removeItem(`fetch_profile_${window.okey}`);
       } catch (reason) {
         console.error(reason);
+        // Hide loading overlay
+        if (overlay) {
+          overlay.style.display = "none";
+        }
         return;
       }
 
