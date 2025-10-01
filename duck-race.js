@@ -487,9 +487,11 @@ class DuckRaceGame {
       dialog.equippedSkills.add(skillName2);
     }
 
+    console.log("clickhandlers");
     // Add click handlers to inventory items
     skills.forEach((skill, index) => {
       const itemEl = document.getElementById(`inventory-item-${skill}`);
+      console.log("itemEl", itemEl);
       if (itemEl) {
         itemEl.addEventListener("click", () => {
           this.handleSkillEquip(dialog, skill, index);
@@ -2016,12 +2018,12 @@ class DuckRaceGame {
 
       raceModeToggle.addEventListener("change", () => {
         // Small delay to ensure game object is ready
-        setTimeout(() => {
+        setTimeout(async () => {
           if (window.game) {
             window.game.updateRankedProfileButton();
             // If switching to ranked mode, fetch profile data
             if (raceModeToggle.checked && window.okey) {
-              window.game.fetchRankedProfile();
+              await window.game.fetchRankedProfile();
               if (window.game.isRankedMode()) {
                 window.game.fetchOnlineLeaderboard();
               }
@@ -4260,7 +4262,7 @@ class DuckRaceGame {
     }
   }
 
-  fetchRankedProfile() {
+  async fetchRankedProfile() {
     if (!window.okey) return;
 
     const cacheBustFetchProfileWithEquip1AndEquip2 = `${
@@ -4272,44 +4274,46 @@ class DuckRaceGame {
       fetchProfileUrl
     )}`;
 
-    this.cachedFetch(
-      corsProxyUrl,
-      {},
-      `fetch_profile_${window.okey}&_cb=${cacheBustFetchProfileWithEquip1AndEquip2}${this.recentRankRaceId}`,
-      15000
-    )
-      .then((data) => {
-        localStorage.setItem("rankedRacerId", data.id);
-        localStorage.setItem("rankedRacerName", data.name);
-        localStorage.setItem(
-          "rankedRacerProfilePicture",
-          data.profilePicture || ""
-        );
-        localStorage.setItem("rankedRacerColor", data.color || "");
-        localStorage.setItem("rankedRacerMmr", data.mmr || 0);
-        const inventory = {
-          boost: data.boost || 0,
-          bomb: data.bomb || 0,
-          splash: data.splash || 0,
-          immune: data.immune || 0,
-          lightning: data.lightning || 0,
-          magnet: data.magnet || 0,
-          box: data.box || ";;",
-        };
-        localStorage.setItem("rankedRacerInventory", JSON.stringify(inventory));
+    try {
+      const data = await this.cachedFetch(
+        corsProxyUrl,
+        {},
+        `fetch_profile_${window.okey}&_cb=${cacheBustFetchProfileWithEquip1AndEquip2}${this.recentRankRaceId}`,
+        15000
+      );
 
-        // Store equipment data if available
-        if (data.equip1 !== undefined) {
-          localStorage.setItem("rankedRacerEquip1", data.equip1);
-        }
-        if (data.equip2 !== undefined) {
-          localStorage.setItem("rankedRacerEquip2", data.equip2);
-        }
+      localStorage.setItem("rankedRacerId", data.id);
+      localStorage.setItem("rankedRacerName", data.name);
+      localStorage.setItem(
+        "rankedRacerProfilePicture",
+        data.profilePicture || ""
+      );
+      localStorage.setItem("rankedRacerColor", data.color || "");
+      localStorage.setItem("rankedRacerMmr", data.mmr || 0);
+      const inventory = {
+        boost: data.boost || 0,
+        bomb: data.bomb || 0,
+        splash: data.splash || 0,
+        immune: data.immune || 0,
+        lightning: data.lightning || 0,
+        magnet: data.magnet || 0,
+        box: data.box || ";;",
+      };
+      localStorage.setItem("rankedRacerInventory", JSON.stringify(inventory));
 
-        this.setWindowRacerData();
-        this.updateRankedProfileButton();
-      })
-      .catch((error) => console.error("Error fetching profile:", error));
+      // Store equipment data if available
+      if (data.equip1 !== undefined) {
+        localStorage.setItem("rankedRacerEquip1", data.equip1);
+      }
+      if (data.equip2 !== undefined) {
+        localStorage.setItem("rankedRacerEquip2", data.equip2);
+      }
+
+      this.setWindowRacerData();
+      this.updateRankedProfileButton();
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
   }
 
   async openBox() {
@@ -6026,7 +6030,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // If in ranked mode and okey defined, fetch profile
   if (window.game.isRankedMode() && window.okey) {
-    window.game.fetchRankedProfile();
+    await window.game.fetchRankedProfile();
   }
 
   // If in ranked mode, fetch leaderboard data
