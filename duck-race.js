@@ -145,7 +145,7 @@ class DuckRaceGame {
     profileBtn.style.display = "none";
 
     // Add click handler
-    profileBtn.addEventListener("click", async () => {
+    this.addEventListenerToElement(profileBtn, "click", async () => {
       if (window.rankedRacerId) {
         await this.editRacer();
       } else {
@@ -450,7 +450,7 @@ class DuckRaceGame {
         boxItemEl.classList.remove("rotating-gold");
       }
       // Add click handler for box
-      boxItemEl.addEventListener("click", async () => {
+      this.addEventListenerToElement(boxItemEl, "click", async () => {
         await this.handleBoxClick();
       });
     }
@@ -487,22 +487,19 @@ class DuckRaceGame {
       dialog.equippedSkills.add(skillName2);
     }
 
-    console.log("clickhandlers");
     // Add click handlers to inventory items
     skills.forEach((skill, index) => {
       const itemEl = document.getElementById(`inventory-item-${skill}`);
-      console.log("itemEl", itemEl);
-      if (itemEl) {
-        itemEl.addEventListener("click", () => {
-          this.handleSkillEquip(dialog, skill, index);
-        });
-      }
+
+      this.addEventListenerToElement(itemEl, "click", () => {
+        this.handleSkillEquip(dialog, skill, index);
+      });
     });
 
     // Add click handlers to equipment squares for unequipping
     const equip1El = document.getElementById("equip1-square");
     if (equip1El) {
-      equip1El.addEventListener("click", () => {
+      this.addEventListenerToElement(equip1El, "click", () => {
         if (dialog.equip1 !== null) {
           this.handleSkillEquip(dialog, skills[dialog.equip1], dialog.equip1);
         }
@@ -511,7 +508,7 @@ class DuckRaceGame {
 
     const equip2El = document.getElementById("equip2-square");
     if (equip2El) {
-      equip2El.addEventListener("click", () => {
+      this.addEventListenerToElement(equip2El, "click", () => {
         if (dialog.equip2 !== null) {
           this.handleSkillEquip(dialog, skills[dialog.equip2], dialog.equip2);
         }
@@ -1976,13 +1973,17 @@ class DuckRaceGame {
   }
 
   setupEventListeners() {
-    document.getElementById("startBtn").addEventListener("click", () => {
-      if (this.raceActive) {
-        this.stopRace();
-      } else {
-        this.startRace();
+    this.addEventListenerToElement(
+      document.getElementById("startBtn"),
+      "click",
+      () => {
+        if (this.raceActive) {
+          this.stopRace();
+        } else {
+          this.startRace();
+        }
       }
-    });
+    );
 
     // Race title management
     this.raceTitleInput.addEventListener("focus", () => {
