@@ -1324,6 +1324,7 @@ input[type="color"].color-picker {
     overflow-y: auto;
     padding: 15px 15px 60px 15px;
     margin-top: 15px;
+    margin-bottom: 30px;
   }
 
   .collapse-btn {
@@ -1368,7 +1369,7 @@ input[type="color"].color-picker {
   }
 
   .sidebar-bottom-content {
-    padding: 15px 0 30px;
+    padding: 15px 15px 75px;
     display: flex;
   }
 
