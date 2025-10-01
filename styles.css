@@ -1076,8 +1076,8 @@ canvas {
 
 .settings-btn {
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: 20px;
+  right: 15px;
   background: #6c5ce7;
   border: none;
   color: white;
